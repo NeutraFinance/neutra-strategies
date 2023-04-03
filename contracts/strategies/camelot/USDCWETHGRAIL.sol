@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.6.12;
+pragma experimental ABIEncoderV2;
+
+import "./CoreStrategyAaveGrail.sol";
+import "../../interfaces/aave/IAaveOracle.sol";
+import {
+    SafeERC20,
+    SafeMath,
+    IERC20, 
+    Address
+} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+
+
+interface IGrailManager {
+    function deposit(uint256 _amount) external;
+    function withdraw(uint256 _amount) external;
+    function harvest() external;
+    function balance() external view returns (uint256 _amount);
+    function getPendingRewards() external view returns (uint256, uint256);
+}
+
+
+// Pool address -> 0x794a61358d6845594f94dc1db02a252b5b4814ad
+// AAVE addresses: https://docs.aave.com/developers/deployed-contracts/v3-mainnet/polygon
+contract USDCWETHGRAIL is CoreStrategyAaveGrail {
+    using SafeERC20 for IERC20;
+    uint256 constant farmPid = 0;
+
+    constructor(address _vault, address _grailManager)
+        public
+        CoreStrategyAaveGrail(
+            _vault,
+            _grailManager,
+            CoreStrategyAaveConfig(
+                0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8, // want -> USDC
+                0x82aF49447D8a07e3bd95BD0d56f35241523fBab1, // short -> WETH
+                0x84652bb2539513BAf36e225c930Fdd8eaa63CE27, // wantShortLP -> USDC/WETH
+                0x625E7708f30cA75bfd92586e17077590C60eb4cD, // aToken
+                0x0c84331e39d6658Cd6e6b9ba04736cC4c4734351, // variableDebtTOken
+                0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb, // PoolAddressesProvider
+                0xc873fEcbd354f5A56E00E710B90EF4201db2448d, // router
+                1e4 //mindeploy
+            )
+        )
+    {}
+
+    function _setup() internal override {
+        weth = router.WETH();
+    }
+
+    function balancePendingHarvest() public view override returns (uint256) {
+        (,uint256 grailRewards) = IGrailManager(grailManager).getPendingRewards();
+        return grailRewards;
+    }
+
+    function _depositLp() internal override {
+        uint256 lpBalance = wantShortLP.balanceOf(address(this));
+        IGrailManager(grailManager).deposit(lpBalance);
+    }
+
+    function _withdrawFarm(uint256 _amount) internal override {
+        if (_amount > 0)
+            IGrailManager(grailManager).withdraw(_amount);
+    }
+
+    function claimHarvest() internal override {
+        IGrailManager(grailManager).harvest();
+        //IMiniChefV2(farmMasterChef).harvest(farmPid, address(this));
+    }
+
+    function countLpPooled() internal view override returns (uint256) {
+        //     return
+        //         IMiniChefV2(farmMasterChef).userInfo(farmPid, address(this)).amount;
+        // }
+        return IGrailManager(grailManager).balance();
+    }
+}
