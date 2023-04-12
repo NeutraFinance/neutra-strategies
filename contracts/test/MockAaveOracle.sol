@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity >=0.6.0 <0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity 0.8.15;
 
 import "../interfaces/aave/IAaveOracle.sol";
 
@@ -9,7 +8,7 @@ contract MockAaveOracle {
     mapping(address => uint256) public prices;
     IAaveOracle oldOracle;
 
-    constructor(address _oldOracle) public {
+    constructor(address _oldOracle) {
         oldOracle = IAaveOracle(_oldOracle);
     }
 

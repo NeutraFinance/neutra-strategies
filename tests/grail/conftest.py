@@ -1,7 +1,9 @@
 import pytest
 from brownie import config
 from brownie import Contract
-from brownie import interface, StrategyInsurance, GrailManager, USDCWETHGRAIL ,accounts
+from brownie import interface, StrategyInsurance, GrailManager, GrailManagerProxy, USDCWETHGRAIL ,accounts
+from tests.helper import encode_function_data
+
 
  # TODO - Pull from coingecko
 DQUICK_PRICE = 159.41
@@ -64,6 +66,10 @@ CONFIG = {
 @pytest.fixture
 def grail_manager_contract():
     yield  GrailManager
+
+@pytest.fixture
+def grail_manager_proxy_contract():
+    yield GrailManagerProxy
 
 @pytest.fixture
 def strategy_contract():
@@ -179,40 +185,35 @@ def vault(pm, gov, rewards, guardian, management, token):
     assert vault.token() == token.address
     yield vault
 
-
 @pytest.fixture
-def grailManager(strategist, keeper, vault, grail_manager_contract, gov) : 
-    grailManager = gov.deploy(grail_manager_contract, gov)
-    yield grailManager
-
-"""
-struct GrailManagerConfig {
-    address want;
-    address lp;
-    address grail;
-    address xGrail;
-    address pool;
-    address router;
-    address yieldBooster;
-}
-
-
-"""
-
-@pytest.fixture
-def strategy(strategist, keeper, vault, strategy_contract, gov, grailManager, conf):
+def strategy_before_set(strategist, keeper, vault, strategy_contract, gov, conf):
     # strategy = strategy_contract.deploy(vault, {'from': strategist,'gas_limit': 20000000})
-    strategy = strategist.deploy(strategy_contract, vault, grailManager.address)
+    strategy = strategist.deploy(strategy_contract, vault)
     insurance = strategist.deploy(StrategyInsurance, strategy)
     strategy.setKeeper(keeper)
     strategy.setInsurance(insurance, {'from': gov})
-    yieldBooster = '0xD27c373950E7466C53e5Cd6eE3F70b240dC0B1B1'
-    xGrail = '0x3CAaE25Ee616f2C8E13C74dA0813402eae3F496b'
-    grailConfig = [strategy.want(), conf['lp_token'], conf['harvest_token'], xGrail, conf['lp_farm'], conf['router'], yieldBooster]
-    grailManager.initialize(gov, strategy, grailConfig, {'from': gov})
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     yield strategy
 
+@pytest.fixture
+def grailManager(grail_manager_proxy_contract, strategy_before_set, grail_manager_contract, gov, conf) : 
+    yieldBooster = '0xD27c373950E7466C53e5Cd6eE3F70b240dC0B1B1'
+    xGrail = '0x3CAaE25Ee616f2C8E13C74dA0813402eae3F496b'
+    
+    grailManager = gov.deploy(grail_manager_contract)
+
+    # grailManager.initialize(gov, strategy, grailConfig, {'from': gov})
+    grailConfig = [strategy_before_set.want(), conf['lp_token'], conf['harvest_token'], xGrail, conf['lp_farm'], conf['router'], yieldBooster]
+
+    encoded_initializer_function = encode_function_data(grailManager.initialize, gov, strategy_before_set, grailConfig)
+    
+    grailManagerProxy = gov.deploy(grail_manager_proxy_contract, grailManager.address, encoded_initializer_function)
+    yield grailManagerProxy
+
+@pytest.fixture
+def strategy(strategy_before_set, grailManager, gov):
+    strategy_before_set.setGrailManager(grailManager, {'from': gov})
+    yield strategy_before_set
 
 @pytest.fixture(scope="session")
 def RELATIVE_APPROX():
@@ -297,13 +298,7 @@ def strategy_mock_initialized_vault(chain, accounts, gov, token, vault, strategy
     yield vault 
 
 @pytest.fixture
-def grailManager_mock_oracle(strategist, keeper, vault, grail_manager_contract, gov) : 
-    grailManager = gov.deploy(grail_manager_contract, gov)
-    yield grailManager
-
-
-@pytest.fixture
-def strategy_mock_oracle(token, amount, user, strategist, keeper, vault, strategy_contract, gov, grailManager_mock_oracle ,MockAaveOracle, conf):
+def strategy_mock_oracle_before_set(token, amount, user, strategist, keeper, vault, strategy_contract, gov ,MockAaveOracle, conf):
     pool_address_provider = interface.IPoolAddressesProvider(POOL_ADDRESS_PROVIDER)
     old_oracle = pool_address_provider.getPriceOracle()
     # Set the mock price oracle
@@ -312,25 +307,43 @@ def strategy_mock_oracle(token, amount, user, strategist, keeper, vault, strateg
     admin = accounts.at(pool_address_provider.owner(), True)
     pool_address_provider.setPriceOracle(oracle, {'from': admin})
 
-    strategy_mock_oracle = strategist.deploy(strategy_contract, vault, grailManager_mock_oracle.address)
+    strategy_mock_oracle = strategist.deploy(strategy_contract, vault)
     insurance = strategist.deploy(StrategyInsurance, strategy_mock_oracle)
     strategy_mock_oracle.setKeeper(keeper)
     strategy_mock_oracle.setInsurance(insurance, {'from': gov})
 
-    yieldBooster = '0xD27c373950E7466C53e5Cd6eE3F70b240dC0B1B1'
-    xGrail = '0x3CAaE25Ee616f2C8E13C74dA0813402eae3F496b'
-    grailConfig = [strategy_mock_oracle.want(), conf['lp_token'], conf['harvest_token'], xGrail, conf['lp_farm'], conf['router'], yieldBooster]
-    grailManager_mock_oracle.initialize(gov, strategy_mock_oracle, grailConfig, {'from': gov})
-
-
     vault.addStrategy(strategy_mock_oracle, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     yield strategy_mock_oracle
+
+@pytest.fixture
+def grailManager_mock_oracle(grail_manager_proxy_contract, grail_manager_contract, gov, strategy_mock_oracle_before_set, conf) : 
+    yieldBooster = '0xD27c373950E7466C53e5Cd6eE3F70b240dC0B1B1'
+    xGrail = '0x3CAaE25Ee616f2C8E13C74dA0813402eae3F496b'
+    
+    grailManager = gov.deploy(grail_manager_contract)
+
+    # grailManager.initialize(gov, strategy, grailConfig, {'from': gov})
+    grailConfig = [strategy_mock_oracle_before_set.want(), conf['lp_token'], conf['harvest_token'], xGrail, conf['lp_farm'], conf['router'], yieldBooster]
+
+    encoded_initializer_function = encode_function_data(grailManager.initialize, gov, strategy_mock_oracle_before_set, grailConfig)
+    
+    grailManagerProxy = gov.deploy(grail_manager_proxy_contract, grailManager.address, encoded_initializer_function)
+
+    yield grailManagerProxy
+
+@pytest.fixture
+def strategy_mock_oracle(strategy_mock_oracle_before_set, grailManager_mock_oracle, gov):
+    strategy_mock_oracle_before_set.setGrailManager(grailManager_mock_oracle, {'from': gov})
+    yield strategy_mock_oracle_before_set
 
 
 # Function scoped isolation fixture to enable xdist.
 # Snapshots the chain before each test and reverts after test completion.
-@pytest.fixture(scope="function", autouse=True)
-def shared_setup(fn_isolation):
-    pass
+# @pytest.fixture(scope="function", autouse=True)
+# def shared_setup(strategy, strategy_mock_oracle, grailManager, grailManager_mock_oracle):
+#     strategy.setGrailManager(grailManager.address)
+#     strategy_mock_oracle.setGrailManager(grailManager_mock_oracle.address)
+#     print(1)
+#     pass
 
 

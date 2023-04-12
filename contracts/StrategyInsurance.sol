@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0
 // Feel free to change the license, but this is what we use
 
-pragma solidity ^0.6.12;
-pragma experimental ABIEncoderV2;
+pragma solidity 0.8.15;
 
 import {
     SafeERC20,
-    SafeMath,
-    IERC20,
     Address
-} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import {Math} from "@openzeppelin/contracts/math/Math.sol";
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import {VaultAPI, StrategyAPI} from "./strategies/BaseStrategy.sol";
 
 interface StrategyAPIExt is StrategyAPI {
@@ -70,7 +69,7 @@ contract StrategyInsurance {
         require(msg.sender == address(strategy));
     }
 
-    constructor(address _strategy) public {
+    constructor(address _strategy) {
         strategy = StrategyAPIExt(_strategy);
         want = IERC20(strategy.want());
     }

@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
-pragma experimental ABIEncoderV2;
+pragma solidity 0.8.15;
 
-import "./CoreStrategyAaveGrail.sol";
-import "../../interfaces/aave/IAaveOracle.sol";
 import {
     SafeERC20,
-    SafeMath,
-    IERC20, 
     Address
-} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./CoreStrategyAaveGrail.sol";
+import "../../interfaces/aave/IAaveOracle.sol";
 
 interface IGrailManager {
     function deposit(uint256 _amount) external;
@@ -27,11 +25,9 @@ contract USDCWETHGRAIL is CoreStrategyAaveGrail {
     using SafeERC20 for IERC20;
     uint256 constant farmPid = 0;
 
-    constructor(address _vault, address _grailManager)
-        public
+    constructor(address _vault)
         CoreStrategyAaveGrail(
             _vault,
-            _grailManager,
             CoreStrategyAaveConfig(
                 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8, // want -> USDC
                 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1, // short -> WETH
@@ -74,5 +70,9 @@ contract USDCWETHGRAIL is CoreStrategyAaveGrail {
         //         IMiniChefV2(farmMasterChef).userInfo(farmPid, address(this)).amount;
         // }
         return IGrailManager(grailManager).balance();
+    }
+
+    function setGrailManager(address _grailManager) external onlyGovernance {
+        grailManager = _grailManager;
     }
 }

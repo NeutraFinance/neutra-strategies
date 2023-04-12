@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 // Feel free to change this version of Solidity. We support >=0.6.0 <0.7.0;
-pragma solidity ^0.6.12;
-pragma experimental ABIEncoderV2;
-
+pragma solidity 0.8.15;
 
 import {
     SafeERC20,
-    SafeMath,
-    IERC20,
     Address
-} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {
     BaseStrategy,
     StrategyParams
 } from "../BaseStrategy.sol";
-import {Math} from "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "../../interfaces/camelot/ICamelotRouter.sol";
 import "../../interfaces/aave/IAToken.sol";
 import "../../interfaces/aave/IVariableDebtToken.sol";
@@ -115,8 +113,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     address weth;
     uint256 public minDeploy;
 
-    constructor(address _vault, address _grailManager ,CoreStrategyAaveConfig memory _config)
-        public
+    constructor(address _vault, CoreStrategyAaveConfig memory _config)
         BaseStrategy(_vault)
     {
         // initialise token interfaces
@@ -128,7 +125,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         shortDecimals = IERC20Extended(_config.short).decimals();
 
         // initialise other interfaces
-        grailManager = _grailManager;
         router = ICamelotRouter(_config.router);
 
         IPoolAddressesProvider provider =
@@ -251,12 +247,12 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     }
 
     function approveContracts() internal {
-        want.safeApprove(address(pool), uint256(-1));
-        short.safeApprove(address(pool), uint256(-1));
-        want.safeApprove(address(router), uint256(-1));
-        short.safeApprove(address(router), uint256(-1));
-        IERC20(address(wantShortLP)).safeApprove(address(router), uint256(-1));
-        IERC20(address(wantShortLP)).safeApprove(grailManager, uint256(-1));
+        want.safeApprove(address(pool), type(uint256).max);
+        short.safeApprove(address(pool), type(uint256).max);
+        want.safeApprove(address(router), type(uint256).max);
+        short.safeApprove(address(router), type(uint256).max);
+        IERC20(address(wantShortLP)).safeApprove(address(router), type(uint256).max);
+        IERC20(address(wantShortLP)).safeApprove(grailManager, type(uint256).max);
     }
 
     function setSlippageConfig(
@@ -967,7 +963,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             _amountShort.mul(slippageAdj).div(BASIS_PRECISION),
             _amountWant.mul(slippageAdj).div(BASIS_PRECISION),
             address(this),
-            now
+            block.timestamp
         );
     }
 
@@ -1009,7 +1005,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
                 amountAMin,
                 amountBMin,
                 address(this),
-                now
+                block.timestamp
             );
         }
     }
@@ -1024,7 +1020,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             getTokenOutPath(address(farmToken), address(want)),
             address(this),
             address(0),
-            now
+            block.timestamp
         );
     }
     */
@@ -1049,7 +1045,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             getTokenOutPath(address(want), address(short)), // _pathWantToShort(),
             address(this),
             address(0),
-            now
+            block.timestamp
         );
         slippageWant = 0;
     }
@@ -1074,7 +1070,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             getTokenOutPath(address(short), address(want)),
             address(this),
             address(0),
-            now
+            block.timestamp
         );
         _slippageWant = 0;
     }
@@ -1094,7 +1090,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             getTokenOutPath(address(want), address(short)), // _pathWantToShort(),
             address(this),
             address(0),
-            now
+            block.timestamp
         );
         
         // TO Do Update this calc
@@ -1105,7 +1101,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         //         amountInMax,
         //         getTokenOutPath(address(want), address(short)),
         //         address(this),
-        //         now
+        //         block.timestamp
         //     );
         // _slippageWant = amounts[0].sub(amountInWant);
 

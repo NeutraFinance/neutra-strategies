@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0
 
-pragma solidity ^0.6.12;
-pragma experimental ABIEncoderV2;
+pragma solidity 0.8.15;
 
 // Grail Router
-import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
-    SafeMath,
-    Address,
-    IERC20
-} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+    SafeERC20,
+    Address
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "../../libraries/proxy/utils/Initializable.sol";
+import "../../libraries/proxy/utils/UUPSUpgradeable.sol";
 import "../../interfaces/camelot/ICamelotRouter.sol";
-import {VaultAPI} from "@yearnvaults/contracts/BaseStrategy.sol";
 
 struct GrailManagerConfig {
     address want;
@@ -120,7 +120,7 @@ interface INFTPool {
  *  keeper permissions.
  *
  */
-contract GrailManager is Initializable, INFTHandler {
+contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     using Address for address;
     using SafeMath for uint256;
 
@@ -144,18 +144,29 @@ contract GrailManager is Initializable, INFTHandler {
 
     bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
 
-    constructor(address _manager) public {
-        manager = _manager;
+    modifier onlyManager() {
+        _onlyManager();
+        _;
+    }
+
+    modifier onlyStrategist() {
+        _onlyStrategist();
+        _;
+    }
+
+    modifier onlyStrategyAndAbove() {
+        require(msg.sender == address(strategy) || msg.sender == manager || msg.sender == strategist);
+        _;
     }
 
     function _onlyManager() internal {
-        require(msg.sender == address(manager));
+        require(msg.sender == manager);
     }
 
     function _onlyStrategist() internal {
         require(
-            msg.sender == address(strategist) ||
-                msg.sender == address(strategist)
+            msg.sender == manager ||
+                msg.sender == strategist
         );
     }
 
@@ -180,10 +191,12 @@ contract GrailManager is Initializable, INFTHandler {
         router = ICamelotRouter(_config.router);
         yieldBooster = _config.yieldBooster;
 
-        lp.approve(address(pool), uint256(-1));
-        grail.approve(address(router), uint256(-1));
-        xGrail.approveUsage(yieldBooster, uint256(-1));
+        lp.approve(address(pool), type(uint256).max);
+        grail.approve(address(router), type(uint256).max);
+        xGrail.approveUsage(yieldBooster, type(uint256).max);
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyManager {}
 
     function setStrategy(address _strategy) external {
         _onlyStrategist();
@@ -228,8 +241,7 @@ contract GrailManager is Initializable, INFTHandler {
         lp.transfer(address(strategy), _amount);
     }
 
-    function harvest() external {
-        _onlyStrategy();
+    function harvest() external onlyStrategyAndAbove {
         // harvest grail rewards
         if (pool.balanceOf(address(this)) > 0) {
             pool.harvestPosition(tokenId);
@@ -238,8 +250,7 @@ contract GrailManager is Initializable, INFTHandler {
         }
     }
 
-    function stakeXGrail(uint256 _amount) external {
-        _onlyStrategy();
+    function stakeXGrail(uint256 _amount) external onlyStrategist {
         _stakeXGrail(_amount);
     }
 
@@ -266,10 +277,9 @@ contract GrailManager is Initializable, INFTHandler {
                 _path,
                 address(strategy),
                 address(strategy),
-                now
+                block.timestamp
             );
         }
-
     }
 
     // need to get the pending Grail rewards
@@ -302,17 +312,20 @@ contract GrailManager is Initializable, INFTHandler {
     }
 
     function setManagerInternal(address _manager) internal {
+        require(_manager != address(0), "invalid address");
         manager = _manager;
     }
 
-    function approveUsage(address _usage) external {
-        _onlyManager();
-        xGrail.approveUsage(_usage, uint256(-1));
+    function approveUsage(address _usage) external onlyManager {
+        xGrail.approveUsage(_usage, type(uint256).max);
     }
 
-    function setYieldBooster(address _yieldBooster) external {
-        _onlyManager();
+    function setYieldBooster(address _yieldBooster) external onlyManager {
         yieldBooster = _yieldBooster;
+    }
+
+    function setManager(address _manager) external onlyManager {
+        setManagerInternal(_manager);
     }
 
     function onERC721Received(
