@@ -296,7 +296,6 @@ def test_Sandwhich_Low(
 
     vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
     chain.sleep(1)
-    chain.mine(1)
     strategy_mock_oracle.harvest()
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
