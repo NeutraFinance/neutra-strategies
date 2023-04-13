@@ -252,7 +252,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         want.safeApprove(address(router), type(uint256).max);
         short.safeApprove(address(router), type(uint256).max);
         IERC20(address(wantShortLP)).safeApprove(address(router), type(uint256).max);
-        IERC20(address(wantShortLP)).safeApprove(grailManager, type(uint256).max);
     }
 
     function setSlippageConfig(

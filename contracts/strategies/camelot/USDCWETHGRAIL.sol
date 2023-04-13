@@ -62,17 +62,14 @@ contract USDCWETHGRAIL is CoreStrategyAaveGrail {
 
     function claimHarvest() internal override {
         IGrailManager(grailManager).harvest();
-        //IMiniChefV2(farmMasterChef).harvest(farmPid, address(this));
     }
 
     function countLpPooled() internal view override returns (uint256) {
-        //     return
-        //         IMiniChefV2(farmMasterChef).userInfo(farmPid, address(this)).amount;
-        // }
         return IGrailManager(grailManager).balance();
     }
 
     function setGrailManager(address _grailManager) external onlyGovernance {
         grailManager = _grailManager;
+        IERC20(address(wantShortLP)).safeApprove(_grailManager, type(uint256).max);
     }
 }

@@ -2,6 +2,8 @@ import brownie
 from brownie import interface, Contract, accounts, MockAaveOracle
 import pytest
 import time 
+from tests.helper import encode_function_data
+
 
 POOL = '0x794a61358D6845594F94dc1DB02A252b5b4814aD' 
 want = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174' # USDC
@@ -193,7 +195,7 @@ def test_partialWithdrawal_unbalancedDebtHigh(
 
 # Load up the vault with 2 strategies, deploy them with harvests and then withdraw 75% from the vault to test  withdrawing 100% from one of the strats is okay. 
 def test_withdraw_all_from_multiple_strategies(
-    gov, vault, strategy_mock_oracle, token, user, amount, conf, chain, strategy_contract, strategist, StrategyInsurance, keeper, grail_manager_contract
+    gov, vault, strategy_mock_oracle, token, user, amount, conf, chain, strategy_contract, strategist, StrategyInsurance, keeper, grail_manager_contract, grail_manager_proxy_contract
 ):
     # Deposit to the vault and harvest
     user_balance_before = token.balanceOf(user)
@@ -201,14 +203,21 @@ def test_withdraw_all_from_multiple_strategies(
     vault.deposit(amount, {"from": user})
     chain.sleep(1)
     vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
-    newGrailManager = gov.deploy(grail_manager_contract, gov)
 
-    new_strategy = strategist.deploy(strategy_contract, vault,  newGrailManager.address)
+    new_strategy = strategist.deploy(strategy_contract, vault)
 
     yieldBooster = '0xD27c373950E7466C53e5Cd6eE3F70b240dC0B1B1'
     xGrail = '0x3CAaE25Ee616f2C8E13C74dA0813402eae3F496b'
+    grailManager = gov.deploy(grail_manager_contract)
+
+    # grailManager.initialize(gov, strategy, grailConfig, {'from': gov})
     grailConfig = [new_strategy.want(), conf['lp_token'], conf['harvest_token'], xGrail, conf['lp_farm'], conf['router'], yieldBooster]
-    newGrailManager.initialize(gov, new_strategy, grailConfig, {'from': gov})
+
+    encoded_initializer_function = encode_function_data(grailManager.initialize, gov, new_strategy, grailConfig)
+    
+    grailManagerProxy = gov.deploy(grail_manager_proxy_contract, grailManager.address, encoded_initializer_function)
+
+    new_strategy.setGrailManager(grailManagerProxy.address, {'from': gov})
 
     newInsurance = strategist.deploy(StrategyInsurance, new_strategy)
     new_strategy.setKeeper(keeper)
@@ -287,6 +296,7 @@ def test_Sandwhich_Low(
 
     vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
     chain.sleep(1)
+    chain.mine(1)
     strategy_mock_oracle.harvest()
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 

@@ -3,9 +3,10 @@ from brownie import Contract, interface, accounts
 import pytest
 
 
-def farmWithdraw(grailManager, pid, strategy, amount):
+def farmWithdraw(grailManager, grail_manager_contract, strategy, amount):
+    grailManager_box = Contract.from_abi("GrailManager", grailManager.address, grail_manager_contract.abi)
     auth = accounts.at(strategy, True)
-    grailManager.withdraw(amount, {'from': auth})
+    grailManager_box.withdraw(amount, {'from': auth})
 
 
 @pytest.fixture
@@ -13,7 +14,7 @@ def short(strategy):
     assert Contract(strategy.short())
 
 
-def test_debt_rebalance(chain, accounts, token, deployed_vault, strategy, user, conf, gov, lp_token, lp_whale, grailManager, lp_price, pid):
+def test_debt_rebalance(chain, accounts, token, deployed_vault, strategy, user, conf, gov, lp_token, lp_whale, grailManager, lp_price, pid, grail_manager_contract):
     ###################################################################
     # Test Debt Rebalance
     ###################################################################
@@ -65,7 +66,7 @@ def test_debt_rebalance(chain, accounts, token, deployed_vault, strategy, user, 
     # Change the debt ratio to ~105% and rebalance - steal some lp from the strat
     sendAmount = round(strategy.balanceLp() * 0.05/1.05 / lp_price)
     auth = accounts.at(strategy, True)
-    farmWithdraw(grailManager, pid, strategy, sendAmount)
+    farmWithdraw(grailManager, grail_manager_contract, strategy, sendAmount)
     lp_token.transfer(user, sendAmount, {'from': auth})
 
     print('Send amount: {0}'.format(sendAmount))
@@ -91,7 +92,7 @@ def test_debt_rebalance(chain, accounts, token, deployed_vault, strategy, user, 
     # sendAmount = round(strategy.balanceLpInShort()*(1 - 1/1.50))
     sendAmount = round(strategy.balanceLp() * 0.5/1.50 / lp_price)
     auth = accounts.at(strategy, True)
-    farmWithdraw(grailManager, pid, strategy, sendAmount)
+    farmWithdraw(grailManager, grail_manager_contract, strategy, sendAmount)
     lp_token.transfer(user, sendAmount, {'from': auth})
 
     print('Send amount: {0}'.format(sendAmount))
@@ -114,7 +115,7 @@ def test_debt_rebalance(chain, accounts, token, deployed_vault, strategy, user, 
     assert pytest.approx(collatRatioBefore, rel=1e-2) == strategy.calcCollateral()
 
 
-def test_debt_rebalance_partial(chain, accounts, token, deployed_vault, strategy, user, strategist, gov, lp_token, lp_whale, grailManager, lp_price, pid):
+def test_debt_rebalance_partial(chain, accounts, token, deployed_vault, strategy, user, strategist, gov, lp_token, lp_whale, grailManager, lp_price, pid, grail_manager_contract):
     strategy.setDebtThresholds(9800, 10200, 5000)
 
     # Change the debt ratio to ~95% and rebalance
@@ -156,7 +157,7 @@ def test_debt_rebalance_partial(chain, accounts, token, deployed_vault, strategy
     # Change the debt ratio to ~105% and rebalance - steal some lp from the strat
     sendAmount = round(strategy.balanceLp() * 0.05/1.05 / lp_price)
     auth = accounts.at(strategy, True)
-    farmWithdraw(grailManager, pid, strategy, sendAmount)
+    farmWithdraw(grailManager, grail_manager_contract, strategy, sendAmount)
     lp_token.transfer(user, sendAmount, {'from': auth})
 
     print('Send amount: {0}'.format(sendAmount))

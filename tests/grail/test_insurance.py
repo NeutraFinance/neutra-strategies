@@ -4,9 +4,10 @@ from brownie import Contract, accounts
 import time 
 
 
-def farmWithdraw(grailManager, pid, strategy, amount):
+def farmWithdraw(grailManager, grail_manager_contract, strategy, amount):
+    grailManager_box = Contract.from_abi("GrailManager", grailManager.address, grail_manager_contract.abi)
     auth = accounts.at(strategy, True)
-    grailManager.withdraw(amount, {'from': auth})
+    grailManager_box.withdraw(amount, {'from': auth})
 
 def test_report_profit(
     chain,
@@ -56,7 +57,8 @@ def test_full_payout(
     user,
     pid,
     StrategyInsurance,
-    grailManager
+    grailManager,
+    grail_manager_contract
 ):
     vault = deployed_vault
     insurance = StrategyInsurance.at(strategy.insurance())
@@ -77,7 +79,7 @@ def test_full_payout(
     stolen = strategy.estimatedTotalAssets() * 0.0005
     sendAmount = int(stolen / lp_price)
     auth = accounts.at(strategy, True)
-    farmWithdraw(grailManager, pid, strategy, sendAmount)
+    farmWithdraw(grailManager, grail_manager_contract, strategy, sendAmount)
     lp_token.transfer(user, sendAmount, {'from': auth})
 
     # *** 1 *** Test the insurance payout

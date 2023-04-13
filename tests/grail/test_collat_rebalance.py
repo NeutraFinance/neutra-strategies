@@ -3,9 +3,10 @@ from brownie import Contract, interface, accounts
 import pytest
 
 
-def farmWithdraw(grailManager, pid, strategy, amount):
+def farmWithdraw(grailManager, grail_manager_contract, strategy, amount):
+    grailManager_box = Contract.from_abi("GrailManager", grailManager.address, grail_manager_contract.abi)
     auth = accounts.at(strategy, True)
-    grailManager.withdraw(amount, {'from': auth})
+    grailManager_box.withdraw(amount, {'from': auth})
 
 @pytest.fixture
 def short(strategy):
@@ -100,7 +101,7 @@ def test_large_collat_rebalance_with_low_debt(chain, accounts, token, deployed_v
     assert pytest.approx(target, rel=1e-2) == debtCollat
 
 
-def test_large_collat_rebalance_with_low_debt(chain, accounts, token, deployed_vault, strategy, user, conf, gov, lp_token, lp_whale, grailManager, lp_price, pid):
+def test_large_collat_rebalance_with_low_debt(chain, accounts, token, deployed_vault, strategy, user, conf, gov, lp_token, lp_whale, grailManager, lp_price, pid, grail_manager_contract):
     # set low collateral and rebalance
     target = 2000
     strategy.setCollateralThresholds(target-500, target, target+500, 7500)
@@ -108,7 +109,7 @@ def test_large_collat_rebalance_with_low_debt(chain, accounts, token, deployed_v
     # Change the debt ratio to ~102%
     sendAmount = round(strategy.balanceLp() * 0.02/1.02 / lp_price)
     auth = accounts.at(strategy, True)
-    farmWithdraw(grailManager, pid, strategy, sendAmount)
+    farmWithdraw(grailManager, grail_manager_contract, strategy, sendAmount)
     lp_token.transfer(user, sendAmount, {'from': auth})
 
     print('Send amount: {0}'.format(sendAmount))
@@ -186,7 +187,7 @@ def test_typical_rebalance_with_low_debt(chain, accounts, token, deployed_vault,
 
 
 # this is a typical collat rebalance ~10% rebalance
-def test_typical_collat_rebalance_with_high_debt(chain, accounts, token, deployed_vault, strategy, user, conf, gov, lp_token, lp_whale, grailManager, lp_price, pid):
+def test_typical_collat_rebalance_with_high_debt(chain, accounts, token, deployed_vault, strategy, user, conf, gov, lp_token, lp_whale, grailManager, lp_price, pid, grail_manager_contract):
     # set low collateral and rebalance
     target = 6800
     strategy.setCollateralThresholds(target-500, target, target+500, 7500)
@@ -195,7 +196,7 @@ def test_typical_collat_rebalance_with_high_debt(chain, accounts, token, deploye
     # Change the debt ratio to ~102%
     sendAmount = round(strategy.balanceLp() * 0.02/1.02 / lp_price)
     auth = accounts.at(strategy, True)
-    farmWithdraw(grailManager, pid, strategy, sendAmount)
+    farmWithdraw(grailManager, grail_manager_contract, strategy, sendAmount)
     lp_token.transfer(user, sendAmount, {'from': auth})
 
     print('Send amount: {0}'.format(sendAmount))
