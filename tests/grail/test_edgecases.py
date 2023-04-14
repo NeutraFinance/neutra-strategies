@@ -53,7 +53,37 @@ def offSetDebtRatioHigh(strategy_mock_oracle, lp_token, token, Contract, swapPct
         camelotRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(swapAmt, 0, [token, short], whale, '0x0000000000000000000000000000000000000000' , 2**256-1, {"from": whale})
     else :
         router.swapExactTokensForTokens(swapAmt, 0, [token, short], whale, 2**256-1, {"from": whale})
+
+def offSetDebtRatioLowAmtIn(strategy_mock_oracle, lp_token, token, Contract, swapAmtMax, router, shortWhale):
+    # use other AMM's LP to force some swaps 
+
+    WHALEHAGOOOO = '0xaa30D6bba6285d0585722e2440Ff89E23EF68864'
+
+    short = Contract(strategy_mock_oracle.short())
+    swapAmt = min(swapAmtMax, short.balanceOf(shortWhale))
+    print("Force Large Swap - to offset debt ratios")
+    short.approve(router, 2**256-1, {"from": shortWhale})
+    if router.address == '0xc873fEcbd354f5A56E00E710B90EF4201db2448d' :
+        camelotRouter = interface.ICamelotRouter(router.address)
+        camelotRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(swapAmt, 0, [short, token], shortWhale, '0x0000000000000000000000000000000000000000' , 2**256-1, {"from": shortWhale})
+
+    else : 
+        router.swapExactTokensForTokens(swapAmt, 0, [short, token], shortWhale, 2**256-1, {"from": shortWhale})
     
+
+    
+
+def offSetDebtRatioHighAmtIn(strategy_mock_oracle, lp_token, token, Contract, swapAmtMax, router, whale):
+    short = Contract(strategy_mock_oracle.short())
+    swapAmt = min(swapAmtMax, token.balanceOf(whale))
+    print("Force Large Swap - to offset debt ratios")
+    token.approve(router, 2**256-1, {"from": whale})
+    if router.address == '0xc873fEcbd354f5A56E00E710B90EF4201db2448d' :
+        camelotRouter = interface.ICamelotRouter(router.address)
+        camelotRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(swapAmt, 0, [token, short], whale, '0x0000000000000000000000000000000000000000' , 2**256-1, {"from": whale})
+    else :
+        router.swapExactTokensForTokens(swapAmt, 0, [token, short], whale, 2**256-1, {"from": whale})
+
 def setOracleShortPriceToLpPrice(strategy_mock_oracle):
     short = Contract(strategy_mock_oracle.short())
     # Oracle should reflect the "new" price
@@ -94,6 +124,7 @@ def test_lossy_withdrawal_partial(
     balAfter = token.balanceOf(user)
 
     assert pytest.approx(balAfter - balBefore, rel = 2e-3) == (half * (1-stealPercent)) 
+
 
 def test_partialWithdrawal_unbalancedDebtLow(
     chain, gov, accounts, token, vault, strategy_mock_oracle, user, strategist, lp_token ,amount, RELATIVE_APPROX, conf, router, shortWhale, Contract
@@ -238,6 +269,7 @@ def test_withdraw_all_from_multiple_strategies(
         pytest.approx(token.balanceOf(user), rel=1e-5) == user_balance_before
     )
 
+
 def test_Sandwhich_High(
     chain, gov, accounts, token, vault, strategy_mock_oracle, user, strategist, lp_token ,amount, RELATIVE_APPROX, conf, router, whale
 
@@ -256,6 +288,10 @@ def test_Sandwhich_High(
 
     # do a big swap to offset debt ratio's massively 
     swapPct = 0.7
+    short = Contract(strategy_mock_oracle.short())
+
+    balBeforeWhale = short.balanceOf(whale)
+
     offSetDebtRatioHigh(strategy_mock_oracle, lp_token, token, Contract, swapPct, router, whale)
 
     offsetEstimatedAssets  = strategy_mock_oracle.estimatedTotalAssets()
@@ -275,6 +311,9 @@ def test_Sandwhich_High(
     chain.mine(1)
     balBefore = token.balanceOf(user)
 
+    balAftereWhale = short.balanceOf(whale)
+
+
     #give RPC a little break to stop it spzzing out 
     time.sleep(5)
     percentWithdrawn = 0.7
@@ -283,6 +322,16 @@ def test_Sandwhich_High(
 
     with brownie.reverts():     
         vault.withdraw({'from' : user}) 
+
+    # swap all tokens back 
+    swapPct = 1 
+
+    balanceDelta = balAftereWhale - balBeforeWhale
+
+    offSetDebtRatioLowAmtIn(strategy_mock_oracle, lp_token, token, Contract, balanceDelta, router, whale)
+
+
+
 
 def test_Sandwhich_Low(
     chain, gov, accounts, token, vault, strategy_mock_oracle, user, strategist, lp_token ,amount, RELATIVE_APPROX, conf, router, shortWhale
