@@ -339,11 +339,8 @@ def strategy_mock_oracle(strategy_mock_oracle_before_set, grailManager_mock_orac
 
 # Function scoped isolation fixture to enable xdist.
 # Snapshots the chain before each test and reverts after test completion.
-# @pytest.fixture(scope="function", autouse=True)
-# def shared_setup(strategy, strategy_mock_oracle, grailManager, grailManager_mock_oracle):
-#     strategy.setGrailManager(grailManager.address)
-#     strategy_mock_oracle.setGrailManager(grailManager_mock_oracle.address)
-#     print(1)
-#     pass
+@pytest.fixture(scope="function", autouse=True)
+def shared_setup(strategy, strategy_mock_oracle, grailManager, grailManager_mock_oracle):
+    pass
 
 
