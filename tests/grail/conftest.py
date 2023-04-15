@@ -186,6 +186,15 @@ def vault(pm, gov, rewards, guardian, management, token):
     yield vault
 
 @pytest.fixture
+def vault_mock_oracle(pm, gov, rewards, guardian, management, token):
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = guardian.deploy(Vault)
+    vault.initialize(token, gov, rewards, "", "", guardian, management)
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    assert vault.token() == token.address
+    yield vault
+
+@pytest.fixture
 def strategy_before_set(strategist, keeper, vault, strategy_contract, gov, conf):
     # strategy = strategy_contract.deploy(vault, {'from': strategist,'gas_limit': 20000000})
     strategy = strategist.deploy(strategy_contract, vault)
@@ -279,26 +288,26 @@ def deployed_vault_large_deposit(chain, accounts, gov, token, vault, strategy, u
 
 
 @pytest.fixture
-def strategy_mock_initialized_vault(chain, accounts, gov, token, vault, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX):
+def strategy_mock_initialized_vault(chain, accounts, gov, token, vault_mock_oracle, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX):
     # Deposit to the vault
-    token.approve(vault.address, amount, {"from": user})
+    token.approve(vault_mock_oracle.address, amount, {"from": user})
     print("Amount: ", amount)
     print("User: ", user)
-    vault.deposit(amount, {"from": user})
-    assert token.balanceOf(vault.address) == amount
+    vault_mock_oracle.deposit(amount, {"from": user})
+    assert token.balanceOf(vault_mock_oracle.address) == amount
     
     # harvest
     chain.sleep(1)
     
-    print("Vault: ",token.balanceOf(vault.address))
+    print("Vault: ",token.balanceOf(vault_mock_oracle.address))
     print("Strategy: ",token.balanceOf(strategy_mock_oracle.address))
     strategy_mock_oracle.harvest()
     strat = strategy_mock_oracle
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
-    yield vault 
+    yield vault_mock_oracle 
 
 @pytest.fixture
-def strategy_mock_oracle_before_set(token, amount, user, strategist, keeper, vault, strategy_contract, gov ,MockAaveOracle, conf):
+def strategy_mock_oracle_before_set(token, amount, user, strategist, keeper, vault_mock_oracle, strategy_contract, gov ,MockAaveOracle, conf):
     pool_address_provider = interface.IPoolAddressesProvider(POOL_ADDRESS_PROVIDER)
     old_oracle = pool_address_provider.getPriceOracle()
     # Set the mock price oracle
@@ -307,12 +316,12 @@ def strategy_mock_oracle_before_set(token, amount, user, strategist, keeper, vau
     admin = accounts.at(pool_address_provider.owner(), True)
     pool_address_provider.setPriceOracle(oracle, {'from': admin})
 
-    strategy_mock_oracle = strategist.deploy(strategy_contract, vault)
+    strategy_mock_oracle = strategist.deploy(strategy_contract, vault_mock_oracle)
     insurance = strategist.deploy(StrategyInsurance, strategy_mock_oracle)
     strategy_mock_oracle.setKeeper(keeper)
     strategy_mock_oracle.setInsurance(insurance, {'from': gov})
 
-    vault.addStrategy(strategy_mock_oracle, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
+    vault_mock_oracle.addStrategy(strategy_mock_oracle, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     yield strategy_mock_oracle
 
 @pytest.fixture

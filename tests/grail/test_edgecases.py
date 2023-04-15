@@ -100,14 +100,14 @@ def strategySharePrice(strategy_mock_oracle, vault):
     return strategy_mock_oracle.estimatedTotalAssets() / vault.strategies(strategy_mock_oracle)['totalDebt']
 
 def test_lossy_withdrawal_partial(
-    chain, gov, accounts, token, vault, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX, conf
+    chain, gov, accounts, token, vault_mock_oracle, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX, conf
 ):
     #strategy.approveContracts({'from':gov})
     # Deposit to the vault and harvest
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
+    token.approve(vault_mock_oracle.address, amount, {"from": user})
+    vault_mock_oracle.deposit(amount, {"from": user})
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
     chain.sleep(1)
     strategy_mock_oracle.harvest()
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
@@ -120,21 +120,21 @@ def test_lossy_withdrawal_partial(
     time.sleep(5)
 
     half = int(amount / 2)
-    vault.withdraw(half, user, 100, {'from' : user}) 
+    vault_mock_oracle.withdraw(half, user, 100, {'from' : user}) 
     balAfter = token.balanceOf(user)
 
     assert pytest.approx(balAfter - balBefore, rel = 2e-3) == (half * (1-stealPercent)) 
 
 
 def test_partialWithdrawal_unbalancedDebtLow(
-    chain, gov, accounts, token, vault, strategy_mock_oracle, user, strategist, lp_token ,amount, RELATIVE_APPROX, conf, router, shortWhale, Contract
+    chain, gov, accounts, token, vault_mock_oracle, strategy_mock_oracle, user, strategist, lp_token ,amount, RELATIVE_APPROX, conf, router, shortWhale, Contract
 ):
     #strategy.approveContracts({'from':gov})
     # Deposit to the vault and harvest
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
+    token.approve(vault_mock_oracle.address, amount, {"from": user})
+    vault_mock_oracle.deposit(amount, {"from": user})
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
     chain.sleep(1)
     strategy_mock_oracle.harvest()
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
@@ -152,14 +152,14 @@ def test_partialWithdrawal_unbalancedDebtLow(
     chain.sleep(1)
     chain.mine(1)
     balBefore = token.balanceOf(user)
-    ssp_before = strategySharePrice(strategy_mock_oracle, vault)
+    ssp_before = strategySharePrice(strategy_mock_oracle, vault_mock_oracle)
 
     #give RPC a little break to stop it spzzing out 
     time.sleep(5)
     percentWithdrawn = 0.7
 
     withdrawAmt = int(amount * percentWithdrawn)
-    vault.withdraw(withdrawAmt, user, 100, {'from' : user}) 
+    vault_mock_oracle.withdraw(withdrawAmt, user, 100, {'from' : user}) 
     balAfter = token.balanceOf(user)
     print("Withdraw Amount : ")
     print(balAfter - balBefore)
@@ -172,18 +172,18 @@ def test_partialWithdrawal_unbalancedDebtLow(
     assert pytest.approx(preWithdrawDebtRatio, rel = 2e-3) == postWithdrawDebtRatio
 
     # confirm the loss was not felt disproportionately by the strategy - Strategy Share Price
-    ssp_after = strategySharePrice(strategy_mock_oracle, vault)
+    ssp_after = strategySharePrice(strategy_mock_oracle, vault_mock_oracle)
     assert ssp_after >= ssp_before * (1 - 1 / 100000)
 
 def test_partialWithdrawal_unbalancedDebtHigh(
-    chain, gov, accounts, token, vault, strategy_mock_oracle, user, strategist, lp_token ,amount, RELATIVE_APPROX, conf, router, whale
+    chain, gov, accounts, token, vault_mock_oracle, strategy_mock_oracle, user, strategist, lp_token ,amount, RELATIVE_APPROX, conf, router, whale
 ):
     #strategy.approveContracts({'from':gov})
     # Deposit to the vault and harvest
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
+    token.approve(vault_mock_oracle.address, amount, {"from": user})
+    vault_mock_oracle.deposit(amount, {"from": user})
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
     chain.sleep(1)
     strategy_mock_oracle.harvest()
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
@@ -201,14 +201,14 @@ def test_partialWithdrawal_unbalancedDebtHigh(
     chain.sleep(1)
     chain.mine(1)
     balBefore = token.balanceOf(user)
-    ssp_before = strategySharePrice(strategy_mock_oracle, vault)
+    ssp_before = strategySharePrice(strategy_mock_oracle, vault_mock_oracle)
 
     #give RPC a little break to stop it spzzing out 
     time.sleep(5)
     percentWithdrawn = 0.7
 
     withdrawAmt = int(amount * percentWithdrawn)
-    vault.withdraw(withdrawAmt, user, 100, {'from' : user})
+    vault_mock_oracle.withdraw(withdrawAmt, user, 100, {'from' : user})
     balAfter = token.balanceOf(user)
     print("Withdraw Amount : ")
     print(balAfter - balBefore)
@@ -220,22 +220,22 @@ def test_partialWithdrawal_unbalancedDebtHigh(
     assert pytest.approx(preWithdrawDebtRatio, rel = 2e-3) == postWithdrawDebtRatio
 
     # confirm the loss was not felt disproportionately by the strategy - Strategy Share Price
-    ssp_after = strategySharePrice(strategy_mock_oracle, vault)
+    ssp_after = strategySharePrice(strategy_mock_oracle, vault_mock_oracle)
     assert ssp_after >= ssp_before * (1 - 1 / 100000)
 
 
 # Load up the vault with 2 strategies, deploy them with harvests and then withdraw 75% from the vault to test  withdrawing 100% from one of the strats is okay. 
 def test_withdraw_all_from_multiple_strategies(
-    gov, vault, strategy_mock_oracle, token, user, amount, conf, chain, strategy_contract, strategist, StrategyInsurance, keeper, grail_manager_contract, grail_manager_proxy_contract
+    gov, vault_mock_oracle, strategy_mock_oracle, token, user, amount, conf, chain, strategy_contract, strategist, StrategyInsurance, keeper, grail_manager_contract, grail_manager_proxy_contract
 ):
     # Deposit to the vault and harvest
     user_balance_before = token.balanceOf(user)
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
+    token.approve(vault_mock_oracle.address, amount, {"from": user})
+    vault_mock_oracle.deposit(amount, {"from": user})
     chain.sleep(1)
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
 
-    new_strategy = strategist.deploy(strategy_contract, vault)
+    new_strategy = strategist.deploy(strategy_contract, vault_mock_oracle)
 
     yieldBooster = '0xD27c373950E7466C53e5Cd6eE3F70b240dC0B1B1'
     xGrail = '0x3CAaE25Ee616f2C8E13C74dA0813402eae3F496b'
@@ -253,7 +253,7 @@ def test_withdraw_all_from_multiple_strategies(
     newInsurance = strategist.deploy(StrategyInsurance, new_strategy)
     new_strategy.setKeeper(keeper)
     new_strategy.setInsurance(newInsurance, {'from': gov})
-    vault.addStrategy(new_strategy, 50_00, 0, 2 ** 256 - 1, 1_000, {"from": gov})
+    vault_mock_oracle.addStrategy(new_strategy, 50_00, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     strategy_mock_oracle.harvest()
     chain.sleep(1)
     new_strategy.harvest()
@@ -264,24 +264,24 @@ def test_withdraw_all_from_multiple_strategies(
     assert pytest.approx(new_strategy.estimatedTotalAssets(), rel=2e-3) == half
 
     # Withdrawal
-    vault.withdraw(amount, {"from": user})
+    vault_mock_oracle.withdraw(amount, {"from": user})
     assert (
         pytest.approx(token.balanceOf(user), rel=1e-5) == user_balance_before
     )
 
 
 def test_Sandwhich_High(
-    chain, gov, accounts, token, vault, strategy_mock_oracle, user, strategist, lp_token ,amount, RELATIVE_APPROX, conf, router, whale
+    chain, gov, accounts, token, vault_mock_oracle, strategy_mock_oracle, user, strategist, lp_token ,amount, RELATIVE_APPROX, conf, router, whale
 
 ):
     #strategy.approveContracts({'from':gov})
     # Deposit to the vault and harvest
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
+    token.approve(vault_mock_oracle.address, amount, {"from": user})
+    vault_mock_oracle.deposit(amount, {"from": user})
 
     balBefore = token.balanceOf(user)
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
     chain.sleep(1)
     strategy_mock_oracle.harvest()
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
@@ -321,7 +321,7 @@ def test_Sandwhich_High(
     withdrawAmt = int(amount * percentWithdrawn)
 
     with brownie.reverts():     
-        vault.withdraw({'from' : user}) 
+        vault_mock_oracle.withdraw({'from' : user}) 
 
     # swap all tokens back 
     swapPct = 1 
@@ -331,19 +331,17 @@ def test_Sandwhich_High(
     offSetDebtRatioLowAmtIn(strategy_mock_oracle, lp_token, token, Contract, balanceDelta, router, whale)
 
 
-
-
 def test_Sandwhich_Low(
-    chain, gov, accounts, token, vault, strategy_mock_oracle, user, strategist, lp_token ,amount, RELATIVE_APPROX, conf, router, shortWhale
+    chain, gov, accounts, token, vault_mock_oracle, strategy_mock_oracle, user, strategist, lp_token ,amount, RELATIVE_APPROX, conf, router, shortWhale
 ):
     #strategy.approveContracts({'from':gov})
     # Deposit to the vault and harvest
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
+    token.approve(vault_mock_oracle.address, amount, {"from": user})
+    vault_mock_oracle.deposit(amount, {"from": user})
 
     balBefore = token.balanceOf(user)
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
     chain.sleep(1)
     strategy_mock_oracle.harvest()
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
@@ -375,7 +373,7 @@ def test_Sandwhich_Low(
     withdrawAmt = int(amount * percentWithdrawn)
 
     with brownie.reverts():     
-        vault.withdraw({'from' : user}) 
+        vault_mock_oracle.withdraw({'from' : user}) 
 
 """
 def test_collat_rebalance_PriceOffset(chain, accounts, token, strategist, strategy_mock_initialized_vault, strategy_mock_oracle, user, conf, gov, lp_token, lp_whale, lp_farm, lp_price, pid, router, whale, shortWhale):

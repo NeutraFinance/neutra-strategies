@@ -436,7 +436,7 @@ def test_lossy_withdrawal_95pc(
 
 
 def test_reduce_debt_with_low_calcdebtratio(
-    chain, gov, token, vault, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX, conf, lp_token, lp_whale, lp_price, pid, router, shortWhale, strategy_mock_initialized_vault
+    chain, gov, token, vault_mock_oracle, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX, conf, lp_token, lp_whale, lp_price, pid, router, shortWhale, strategy_mock_initialized_vault
 ):
     swapPct = 0.015
     # Setting higher testPriceSource treshold for user
@@ -451,13 +451,13 @@ def test_reduce_debt_with_low_calcdebtratio(
     #assert pytest.approx(9500, rel=1e-3) == debtRatio
     assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
     chain.sleep(1)
     chain.mine(1)
     strategy_mock_oracle.harvest()
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=2e-3) == half
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 0, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 0, {"from": gov})
     chain.sleep(1)
     chain.mine(1)
     strategy_mock_oracle.harvest()
@@ -466,7 +466,7 @@ def test_reduce_debt_with_low_calcdebtratio(
 
 
 def test_reduce_debt_with_high_calcdebtratio(
-    chain, gov, token, vault, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX, conf, lp_token, lp_whale, lp_price, pid, router, whale, strategy_mock_initialized_vault
+    chain, gov, token, vault_mock_oracle, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX, conf, lp_token, lp_whale, lp_price, pid, router, whale, strategy_mock_initialized_vault
 ):
     swapPct = 0.015
     # Setting higher testPriceSource treshold for user
@@ -485,14 +485,14 @@ def test_reduce_debt_with_high_calcdebtratio(
     strategy_mock_oracle.harvest()
     newAmount = strategy_mock_oracle.estimatedTotalAssets() 
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
     chain.sleep(1)
     chain.mine(1)
     strategy_mock_oracle.harvest()
 
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=2e-3) == int(newAmount / 2)
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 0, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 0, {"from": gov})
     chain.sleep(1)
     chain.mine(1)
     strategy_mock_oracle.harvest()
@@ -500,14 +500,14 @@ def test_reduce_debt_with_high_calcdebtratio(
     assert strategy_mock_oracle.estimatedTotalAssets() / amount < 1e-4  # near zero
 
 def test_increase_debt_with_low_calcdebtratio(
-    chain, gov, token, vault, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX, conf, lp_token, lp_whale, lp_price, pid, router, shortWhale
+    chain, gov, token, vault_mock_oracle, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX, conf, lp_token, lp_whale, lp_price, pid, router, shortWhale
 ):
     # Deposit to the vault and harvest
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
+    token.approve(vault_mock_oracle.address, amount, {"from": user})
+    vault_mock_oracle.deposit(amount, {"from": user})
     half = int(amount / 2)
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
     chain.sleep(1)
     chain.mine(1)
     strategy_mock_oracle.harvest()
@@ -528,13 +528,13 @@ def test_increase_debt_with_low_calcdebtratio(
     #assert pytest.approx(9500, rel=1e-3) == debtRatio
     assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
     chain.sleep(1)
     chain.mine(1)
     strategy_mock_oracle.harvest()
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=2e-3) == amount
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 0, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 0, {"from": gov})
     chain.sleep(1)
     strategy_mock_oracle.harvest()
     assert strategy_mock_oracle.estimatedTotalAssets() < 10 ** (token.decimals() - 3) # near zero
@@ -542,15 +542,15 @@ def test_increase_debt_with_low_calcdebtratio(
 
 
 def test_increase_debt_with_high_calcdebtratio(
-    chain, gov, token, vault, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX, conf, lp_token, lp_whale, lp_price, pid, router, whale
+    chain, gov, token, vault_mock_oracle, strategy_mock_oracle, user, strategist, amount, RELATIVE_APPROX, conf, lp_token, lp_whale, lp_price, pid, router, whale
 ):
     # Deposit to the vault and harvest
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
+    token.approve(vault_mock_oracle.address, amount, {"from": user})
+    vault_mock_oracle.deposit(amount, {"from": user})
     # Setting higher testPriceSource treshold for user
     strategy_mock_oracle.setSlippageConfig(9900, 400, 500, True)
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
     chain.sleep(1)
     chain.mine(1)
     strategy_mock_oracle.harvest()
@@ -571,7 +571,7 @@ def test_increase_debt_with_high_calcdebtratio(
     strategy_mock_oracle.harvest()
     newAmount = strategy_mock_oracle.estimatedTotalAssets() 
 
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
     chain.sleep(1)
     chain.mine(1)
     strategy_mock_oracle.harvest()
@@ -580,7 +580,7 @@ def test_increase_debt_with_high_calcdebtratio(
     assert pytest.approx(strategy_mock_oracle.estimatedTotalAssets(), rel=2e-3) == int(amount - loss)
 
     
-    vault.updateStrategyDebtRatio(strategy_mock_oracle.address, 0, {"from": gov})
+    vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 0, {"from": gov})
     chain.sleep(1)
     chain.mine(1)
     strategy_mock_oracle.harvest()
