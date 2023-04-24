@@ -68,7 +68,7 @@ contract USDCWETHGRAIL is CoreStrategyAaveGrail {
         return IGrailManager(grailManager).balance();
     }
 
-    function setGrailManager(address _grailManager) external onlyGovernance {
+    function setGrailManager(address _grailManager) external onlyAuthorized {
         grailManager = _grailManager;
         IERC20(address(wantShortLP)).safeApprove(_grailManager, type(uint256).max);
     }
