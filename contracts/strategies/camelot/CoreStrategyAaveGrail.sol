@@ -1078,7 +1078,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         internal
         returns (uint256 _slippageWant)
     {
-        uint256 amountInWant = getAmountIn(_amountOut)
+        uint256 amountInWant = getAmountIn(_amountOut);
 
         // Sub Optimal implementation given camelot does not have SwapTokensForExactTokens
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
