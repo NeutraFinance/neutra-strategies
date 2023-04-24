@@ -1038,6 +1038,8 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     {
         uint256 amountOutMin = convertWantToShortLP(_amount);
         
+        uint256 shortBalanceBefore = short.balanceOf(address(this));
+
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             _amount,
             amountOutMin.mul(slippageAdj).div(BASIS_PRECISION),
@@ -1046,7 +1048,10 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             address(this),
             block.timestamp
         );
-        slippageWant = 0;
+
+        uint256 amountOut = short.balanceOf(address(this)) - shortBalanceBefore;
+
+        slippageWant = convertShortToWantLP(amountOutMin - amountOut);
     }
 
     /**
@@ -1063,6 +1068,9 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         returns (uint256 _amountWant, uint256 _slippageWant)
     {
         _amountWant = convertShortToWantLP(_amountShort);
+
+        uint256 wantBalanceBefore = want.balanceOf(address(this));
+
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             _amountShort,
             _amountWant.mul(slippageAdj).div(BASIS_PRECISION),
@@ -1071,7 +1079,10 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             address(this),
             block.timestamp
         );
-        _slippageWant = 0;
+
+        uint256 _amountWantOut = want.balanceOf(address(this)) - wantBalanceBefore;
+
+        _slippageWant = _amountWant - _amountWantOut;
     }
 
     function _swapWantShortExact(uint256 _amountOut)
