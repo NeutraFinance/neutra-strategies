@@ -1043,7 +1043,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             amountOutMin.mul(slippageAdj).div(BASIS_PRECISION),
             getTokenOutPath(address(want), address(short)), // _pathWantToShort(),
             address(this),
-            address(0),
+            address(this),
             block.timestamp
         );
         slippageWant = 0;
@@ -1068,7 +1068,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             _amountWant.mul(slippageAdj).div(BASIS_PRECISION),
             getTokenOutPath(address(short), address(want)),
             address(this),
-            address(0),
+            address(this),
             block.timestamp
         );
         _slippageWant = 0;
@@ -1078,20 +1078,21 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         internal
         returns (uint256 _slippageWant)
     {
-        uint256 amountInWant = getAmountIn(_amountOut);
+        uint256 amountInWant = convertShortToWantLP(_amountOut);
+        uint256 amountInExactWant = getAmountIn(_amountOut);
 
         // Sub Optimal implementation given camelot does not have SwapTokensForExactTokens
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            amountInWant,
+            amountInExactWant,
             _amountOut,
             getTokenOutPath(address(want), address(short)), // _pathWantToShort(),
             address(this),
-            address(0),
+            address(this),
             block.timestamp
         );
         
         // TO Do Update this calc
-        _slippageWant = 0;
+        _slippageWant = amountInExactWant - amountInWant;
         // uint256[] memory amounts =
         //     router.swapTokensForExactTokens(
         //         _amountOut,
