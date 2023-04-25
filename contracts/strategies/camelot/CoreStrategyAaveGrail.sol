@@ -1038,15 +1038,20 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     {
         uint256 amountOutMin = convertWantToShortLP(_amount);
         
+        uint256 shortBalanceBefore = short.balanceOf(address(this));
+
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             _amount,
             amountOutMin.mul(slippageAdj).div(BASIS_PRECISION),
             getTokenOutPath(address(want), address(short)), // _pathWantToShort(),
             address(this),
-            address(0),
+            address(this),
             block.timestamp
         );
-        slippageWant = 0;
+
+        uint256 amountOut = short.balanceOf(address(this)) - shortBalanceBefore;
+
+        slippageWant = convertShortToWantLP(amountOutMin - amountOut);
     }
 
     /**
@@ -1063,15 +1068,21 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         returns (uint256 _amountWant, uint256 _slippageWant)
     {
         _amountWant = convertShortToWantLP(_amountShort);
+
+        uint256 wantBalanceBefore = want.balanceOf(address(this));
+
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             _amountShort,
             _amountWant.mul(slippageAdj).div(BASIS_PRECISION),
             getTokenOutPath(address(short), address(want)),
             address(this),
-            address(0),
+            address(this),
             block.timestamp
         );
-        _slippageWant = 0;
+
+        uint256 _amountWantOut = want.balanceOf(address(this)) - wantBalanceBefore;
+
+        _slippageWant = _amountWant - _amountWantOut;
     }
 
     function _swapWantShortExact(uint256 _amountOut)
@@ -1079,21 +1090,20 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         returns (uint256 _slippageWant)
     {
         uint256 amountInWant = convertShortToWantLP(_amountOut);
-        uint256 amountInMax =
-            (amountInWant.mul(BASIS_PRECISION).div(slippageAdj)).add(10); // add 1 to make up for rounding down
+        uint256 amountInExactWant = getAmountIn(_amountOut);
 
         // Sub Optimal implementation given camelot does not have SwapTokensForExactTokens
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            amountInMax,
+            amountInExactWant,
             _amountOut,
             getTokenOutPath(address(want), address(short)), // _pathWantToShort(),
             address(this),
-            address(0),
+            address(this),
             block.timestamp
         );
         
         // TO Do Update this calc
-        _slippageWant = 0;
+        _slippageWant = amountInExactWant - amountInWant;
         // uint256[] memory amounts =
         //     router.swapTokensForExactTokens(
         //         _amountOut,
@@ -1102,9 +1112,17 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         //         address(this),
         //         block.timestamp
         //     );
-        // _slippageWant = amounts[0].sub(amountInWant);
+        // _slippageWant = amounts[0].sub(amountInWant);   
+    }
 
-        
+    function getAmountIn(uint256 amountOut) internal returns (uint256 amountIn) {
+        require(amountOut > 0, "insufficient output amount");
+        (uint256 reserveIn, uint256 reserveOut) = getLpReserves();
+        require(reserveIn > 0 && reserveOut > 0, "insufficient liquidity");
+
+        uint256 numerator = reserveIn.mul(amountOut).mul(1000);
+        uint256 denominator = reserveOut.sub(amountOut).mul(997);
+        amountIn = (numerator / denominator).add(1);
     }
 
     /**
