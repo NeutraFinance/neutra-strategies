@@ -73,15 +73,15 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         uint256 indexed adjAmount
     );
 
-    uint256 public collatUpper = 6700;
-    uint256 public collatTarget = 6000;
-    uint256 public collatLower = 5300;
-    uint256 public debtUpper = 10190;
-    uint256 public debtLower = 9810;
+    uint256 public collatUpper = 7500;
+    uint256 public collatTarget = 7000;
+    uint256 public collatLower = 6500;
+    uint256 public debtUpper = 10390;
+    uint256 public debtLower = 9610;
     uint256 public rebalancePercent = 10000; // 100% (how far does rebalance of debt move towards 100% from threshold)
 
     // protocal limits & upper, target and lower thresholds for ratio of debt to collateral
-    uint256 public collatLimit = 7500;
+    uint256 public collatLimit = 8100;
 
     bool public doPriceCheck = true;
 
