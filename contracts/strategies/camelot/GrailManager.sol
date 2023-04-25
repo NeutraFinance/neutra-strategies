@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
-
 pragma solidity 0.8.15;
 
-// Grail Router
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
