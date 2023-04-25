@@ -29,7 +29,7 @@ def test_debt_rebalance(chain, accounts, token, deployed_vault, strategy, user, 
     print('debtRatio:   {0}'.format(debtRatio))
     print('collatRatio: {0}'.format(collatRatioBefore))
     assert pytest.approx(9500, rel=1e-3) == debtRatio
-    assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
+    assert pytest.approx(7000, rel=2e-2) == collatRatioBefore
     chain.sleep(1)
     chain.mine(1)
 
@@ -52,7 +52,7 @@ def test_debt_rebalance(chain, accounts, token, deployed_vault, strategy, user, 
     print('debtRatio:   {0}'.format(debtRatio))
     print('collatRatio: {0}'.format(collatRatioBefore))
     assert pytest.approx(4000, rel=1e-2) == debtRatio
-    assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
+    assert pytest.approx(7000, rel=2e-2) == collatRatioBefore
     chain.sleep(1)
     chain.mine(1)
 
@@ -77,7 +77,7 @@ def test_debt_rebalance(chain, accounts, token, deployed_vault, strategy, user, 
     print('debtRatio:   {0}'.format(debtRatio))
     print('collatRatio: {0}'.format(collatRatioBefore))
     assert pytest.approx(10500, rel=2e-3) == debtRatio
-    assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
+    assert pytest.approx(7000, rel=2e-2) == collatRatioBefore
     chain.sleep(1)
     chain.mine(1)
 
@@ -103,7 +103,7 @@ def test_debt_rebalance(chain, accounts, token, deployed_vault, strategy, user, 
     print('debtRatio:   {0}'.format(debtRatio))
     print('collatRatio: {0}'.format(collatRatioBefore))
     assert pytest.approx(15000, rel=1e-2) == debtRatio
-    assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
+    assert pytest.approx(7000, rel=2e-2) == collatRatioBefore
     chain.sleep(1)
     chain.mine(1)
 
@@ -130,7 +130,7 @@ def test_debt_rebalance_partial(chain, accounts, token, deployed_vault, strategy
     print('debtRatio:   {0}'.format(debtRatio))
     print('collatRatio: {0}'.format(collatRatioBefore))
     assert pytest.approx(9500, rel=1e-3) == debtRatio
-    assert pytest.approx(6000, rel=1e-3) == collatRatioBefore
+    assert pytest.approx(7000, rel=1e-3) == collatRatioBefore
     chain.sleep(1)
     chain.mine(1)
     chain.sleep(1)
@@ -142,7 +142,7 @@ def test_debt_rebalance_partial(chain, accounts, token, deployed_vault, strategy
     print('debtRatio:   {0}'.format(debtRatio))
     print('collatRatio: {0}'.format(collatRatio))
     assert pytest.approx(9750, rel=1e-3) == debtRatio
-    assert pytest.approx(6000, rel=1e-3) == collatRatio
+    assert pytest.approx(7000, rel=1e-3) == collatRatio
 
     # rebalance the whole way now
     strategy.setDebtThresholds(9800, 10200, 10000)
@@ -151,7 +151,7 @@ def test_debt_rebalance_partial(chain, accounts, token, deployed_vault, strategy
 
     strategy.rebalanceDebt()
     assert pytest.approx(10000, rel=1e-3) == strategy.calcDebtRatio()
-    assert pytest.approx(6000, rel=1e-3) == strategy.calcCollateral()
+    assert pytest.approx(7000, rel=1e-3) == strategy.calcCollateral()
 
     strategy.setDebtThresholds(9800, 10200, 5000)
     # Change the debt ratio to ~105% and rebalance - steal some lp from the strat
@@ -167,7 +167,7 @@ def test_debt_rebalance_partial(chain, accounts, token, deployed_vault, strategy
     print('debtRatio:   {0}'.format(debtRatio))
     print('CollatRatio: {0}'.format(collatRatioBefore))
     assert pytest.approx(10500, rel=1e-3) == debtRatio
-    assert pytest.approx(6000, rel=1e-3) == collatRatioBefore
+    assert pytest.approx(7000, rel=1e-3) == collatRatioBefore
     chain.sleep(1)
     chain.mine(1)
     # Rebalance Debt  and check it's back to the target
@@ -177,5 +177,5 @@ def test_debt_rebalance_partial(chain, accounts, token, deployed_vault, strategy
     print('debtRatio:   {0}'.format(debtRatio))
     print('CollatRatio: {0}'.format(collatRatio))
     assert pytest.approx(10250, rel=1e-3) == debtRatio
-    assert pytest.approx(6000, rel=1e-3) == collatRatio
+    assert pytest.approx(7000, rel=1e-3) == collatRatio
 
