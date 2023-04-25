@@ -72,6 +72,10 @@ interface IXGrailToken {
     function balanceOf(address owner) external view returns (uint256);
 
     function approveUsage(address usage, uint256 _amount) external;
+
+    function redeem(uint256 xGrailAmount, uint256 duration) external;
+
+    function cancelRedeem(uint256 redeemIndex) external;
 }
 
 interface INFTPool {
@@ -214,11 +218,10 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     function deposit(uint256 _amount) external {
         _onlyStrategy();
         lp.transferFrom(address(strategy), address(this), _amount);
-        if (pool.balanceOf(address(this)) > 0) {
+        if (tokenId != uint256(0)) {
             pool.addToPosition(tokenId, _amount);
         } else {
             pool.createPosition(_amount, 0);
-
             uint256 balanceXGrail = balanceOfXGrail();
             if (balanceXGrail > 0) {
                 _stakeXGrail(balanceXGrail);
@@ -228,11 +231,13 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
 
     function withdraw(uint256 _amount) external {
         _onlyStrategy();
-        if (pool.balanceOf(address(this)) > 0) {
-            pool.withdrawFromPosition(tokenId, _amount);
-
-            _swapGrailToWant(balanceOfGrail());
+        if (tokenId == uint256(0)) {
+            return;
         }
+
+        pool.withdrawFromPosition(tokenId, _amount);
+
+        _swapGrailToWant(balanceOfGrail());
 
         if (tokenId != uint256(0)) {
             _stakeXGrail(balanceOfXGrail());
@@ -243,7 +248,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
 
     function harvest() external onlyStrategyAndAbove {
         // harvest grail rewards
-        if (pool.balanceOf(address(this)) > 0) {
+        if (tokenId != uint256(0)) {
             pool.harvestPosition(tokenId);
             _swapGrailToWant(balanceOfGrail());
             _stakeXGrail(balanceOfXGrail());
@@ -252,6 +257,14 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
 
     function stakeXGrail(uint256 _amount) external onlyStrategist {
         _stakeXGrail(_amount);
+    }
+
+    function redeemXGrail(uint256 _amount, uint256 _duration) external onlyManager {
+        xGrail.redeem(_amount, _duration);
+    }
+
+    function cancelRedeem(uint256 _redeemIndex) external onlyManager {
+        xGrail.cancelRedeem(_redeemIndex);
     }
 
     function _stakeXGrail(uint256 _amount) internal {
@@ -329,12 +342,13 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     }
 
     function onERC721Received(
-        address, /*operator*/
+        address, /*_operator*/
         address _from,
         uint256 _tokenId,
         bytes calldata /*data*/
     ) external override returns (bytes4) {
-        require(msg.sender == address(pool), "NFTHandler: unexpected nft");
+        require(msg.sender == address(pool), "unexpected nft");
+        require(_from == address(0), "unexpected operator");
         // save tokenId previous owner
         tokenId = _tokenId;
         pool.approve(_from, _tokenId);
@@ -350,7 +364,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     ) external override returns (bool) {
         require(
             _operator == address(this),
-            "NFTHandler: caller is not the nft previous owner"
+            "caller is not the nft previous owner"
         );
         // if(_to == address(this)){
         //     return false; // user must call xGrailToken.harvestPositionTo as xGrail is not transferable
@@ -365,7 +379,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     ) external override returns (bool) {
         require(
             _operator == address(this),
-            "NFTHandler: caller is not the nft previous owner"
+            "caller is not the nft previous owner"
         );
         return true;
     }
