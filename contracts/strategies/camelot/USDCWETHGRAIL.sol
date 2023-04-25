@@ -72,4 +72,8 @@ contract USDCWETHGRAIL is CoreStrategyAaveGrail {
         grailManager = _grailManager;
         IERC20(address(wantShortLP)).safeApprove(_grailManager, type(uint256).max);
     }
+
+    function setOracle(address _oracle) external onlyAuthorized {
+        oracle = IAaveOracle(_oracle);
+    }
 }

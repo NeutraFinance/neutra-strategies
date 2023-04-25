@@ -129,6 +129,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     using SafeMath for uint256;
 
     uint256 private constant _TOTAL_REWARDS_SHARES = 10000;
+    bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
 
     // camelot contracts
     INFTPool public pool;
@@ -144,9 +145,10 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     uint256 public tokenId;
     IERC20 public want;
 
+    uint256 public minGrailSwapAmount;
+
     mapping(uint256 => address) tokenIdOwner; // save tokenId previous owner
 
-    bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
 
     modifier onlyManager() {
         _onlyManager();
@@ -194,6 +196,8 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         pool = INFTPool(_config.pool);
         router = ICamelotRouter(_config.router);
         yieldBooster = _config.yieldBooster;
+
+        minGrailSwapAmount = 100000000;
 
         lp.approve(address(pool), type(uint256).max);
         grail.approve(address(router), type(uint256).max);
@@ -281,8 +285,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         _path[0] = address(grail);
         _path[1] = address(want);
 
-        uint256 minGrailSwapAmount = 10000000000;
-
         if (_amountGrail > minGrailSwapAmount){
             router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                 _amountGrail,
@@ -319,6 +321,10 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         return (xGrail.balanceOf(address(this)));
     }
 
+    function setMinGrailSwapAmount(uint256 _amount) external onlyStrategist {
+        minGrailSwapAmount = _amount;
+    }
+
     function setStrategyInternal(address _strategy) internal {
         strategy = CoreStrategyAPI(_strategy);
         strategist = strategy.strategist();
@@ -329,7 +335,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         manager = _manager;
     }
 
-    function approveUsage(address _usage) external onlyManager {
+    function approveUsage(address _usage) external onlyStrategist {
         xGrail.approveUsage(_usage, type(uint256).max);
     }
 
