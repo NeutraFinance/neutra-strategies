@@ -73,15 +73,11 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         uint256 indexed adjAmount
     );
 
-    event Reserved(
-        uint256 preLpBalance, 
-        uint256 preLpTotalSupply,
-        uint256 preReserveWant, 
-        uint256 preReserveShort, 
-        uint256 postLpBalance, 
-        uint256 postLpTotalSupply,
-        uint256 postReserveWant, 
-        uint256 postReserveShort
+    event LpBalanceAndReserves(
+        uint256 lpBalance, 
+        uint256 lpTotalSupply,
+        uint256 reserveWant, 
+        uint256 reserveShort
     );
 
     uint256 public collatUpper = 6700;
@@ -169,7 +165,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             uint256 _debtPayment
         )
     {
-        (uint256 preLpBalance, uint256 preLpTotalSupply, uint256 preReserveWant, uint256 preReserveShort) = getLpBalanceAndReserves();
         uint256 totalAssets = estimatedTotalAssets();
         uint256 totalDebt = _getTotalDebt();
         if (totalAssets > totalDebt) {
@@ -211,8 +206,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
                 );
             }
         }
-        (uint256 postLpBalance, uint256 postLpTotalSupply, uint256 postReserveWant, uint256 postReserveShort) = getLpBalanceAndReserves();
-        emit Reserved(preLpBalance, preLpTotalSupply, preReserveWant, preReserveShort, postLpBalance, postLpTotalSupply, postReserveWant, postReserveShort);
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
@@ -425,7 +418,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     }
 
     function _rebalanceCollateralInternal() internal {
-        (uint256 preLpBalance, uint256 preLpTotalSupply, uint256 preReserveWant, uint256 preReserveShort) = getLpBalanceAndReserves();
+        _lpLog();
         uint256 collatRatio = calcCollateral();
         uint256 shortPos = balanceDebt();
         uint256 lendPos = balanceLend();
@@ -449,8 +442,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             _depositLp();
             emit CollatRebalance(collatRatio, adjAmount);
         }
-        (uint256 postLpBalance, uint256 postLpTotalSupply, uint256 postReserveWant, uint256 postReserveShort) = getLpBalanceAndReserves();
-        emit Reserved(preLpBalance, preLpTotalSupply, preReserveWant, preReserveShort, postLpBalance, postLpTotalSupply, postReserveWant, postReserveShort);
+        _lpLog();
     }
 
     // deploy assets according to vault strategy
@@ -576,7 +568,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     }
 
     function _rebalanceDebtInternal() internal {
-        (uint256 preLpBalance, uint256 preLpTotalSupply, uint256 preReserveWant, uint256 preReserveShort) = getLpBalanceAndReserves();
+        _lpLog();
         
         uint256 swapAmountWant;
         uint256 slippage;
@@ -604,8 +596,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         }
         _repayDebt();
         _deployFromLend(estimatedTotalAssets());
-        (uint256 postLpBalance, uint256 postLpTotalSupply, uint256 postReserveWant, uint256 postReserveShort) = getLpBalanceAndReserves();
-        emit Reserved(preLpBalance, preLpTotalSupply, preReserveWant, preReserveShort, postLpBalance, postLpTotalSupply, postReserveWant, postReserveShort);
+        _lpLog();
         emit DebtRebalance(debtRatio, swapAmountWant, slippage);
     }
 
@@ -640,8 +631,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         override
         returns (uint256 _liquidatedAmount, uint256 _loss)
     {
-        (uint256 preLpBalance, uint256 preLpTotalSupply, uint256 preReserve0, uint256 preReserve1) = getLpBalanceAndReserves();
-
+        _lpLog();
         uint256 balanceWant = balanceOfWant();
         uint256 totalAssets = estimatedTotalAssets();
 
@@ -670,8 +660,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             _loss = _amountNeeded.sub(_liquidatedAmount);
         }
 
-        (uint256 postLpBalance, uint256 postLpTotalSupply, uint256 postReserve0, uint256 postReserve1) = getLpBalanceAndReserves();
-        emit Reserved(preLpBalance, preLpTotalSupply, preReserve0, preReserve1, postLpBalance, postLpTotalSupply, postReserve0, postReserve1);
+        _lpLog();
     }
 
     /**
@@ -1133,11 +1122,15 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         
     }
 
-    function getLpBalanceAndReserves() public view returns (uint256, uint256, uint256, uint256) {
+    function lpLog() external onlyKeepers {
+        _lpLog();
+    }
+
+    function _lpLog() internal {
         uint256 lpBalance = wantShortLP.balanceOf(address(this));
         (uint256 wantInLp, uint256 shortInLP) = getLpReserves();
         uint256 lpTotalSupply = wantShortLP.totalSupply();
-        return (lpBalance, lpTotalSupply, wantInLp, shortInLP);
+        emit LpBalanceAndReserves(lpBalance, lpTotalSupply, wantInLp, shortInLP);
     }
 
     /**
