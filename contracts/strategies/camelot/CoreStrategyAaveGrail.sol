@@ -455,6 +455,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         if (_amount < minDeploy || collateralCapReached(_amount)) {
             return;
         }
+        _lpLog();
         uint256 oPrice = getOraclePrice();
         uint256 lpPrice = getLpPrice();
         uint256 borrow =
@@ -470,6 +471,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         _borrow(borrow);
         _addToLP(borrow);
         _depositLp();
+        _lpLog();
     }
 
     function getLpPrice() public view returns (uint256) {
@@ -631,7 +633,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         override
         returns (uint256 _liquidatedAmount, uint256 _loss)
     {
-        _lpLog();
         uint256 balanceWant = balanceOfWant();
         uint256 totalAssets = estimatedTotalAssets();
 
@@ -659,8 +660,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         } else {
             _loss = _amountNeeded.sub(_liquidatedAmount);
         }
-
-        _lpLog();
     }
 
     /**
@@ -689,6 +688,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         if (_amountNeeded <= balanceWant) {
             return (_amountNeeded, 0);
         }
+        _lpLog();
 
         uint256 balanceDeployed = balanceDeployed();
 
@@ -735,6 +735,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             _liquidatedAmount = balanceOfWant().sub(balanceWant);
             _loss = slippage;
         }
+        _lpLog();
     }
 
     function enterMarket() internal {
