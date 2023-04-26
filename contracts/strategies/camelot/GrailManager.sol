@@ -145,9 +145,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
 
     uint256 public minGrailSwapAmount;
 
-    mapping(uint256 => address) tokenIdOwner; // save tokenId previous owner
-
-
     modifier onlyManager() {
         _onlyManager();
         _;
@@ -195,7 +192,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         router = ICamelotRouter(_config.router);
         yieldBooster = _config.yieldBooster;
 
-        minGrailSwapAmount = 100000000;
+        minGrailSwapAmount = 10000000000;
 
         lp.approve(address(pool), type(uint256).max);
         grail.approve(address(router), type(uint256).max);
@@ -249,7 +246,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     }
 
     function harvest() external onlyStrategyAndAbove {
-        // harvest grail rewards
         if (tokenId != uint256(0)) {
             pool.harvestPosition(tokenId);
             _swapGrailToWant(balanceOfGrail());
@@ -295,8 +291,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         }
     }
 
-    // need to get the pending Grail rewards
-    // xGrail cannot be liquidated
     function getPendingRewards() public view returns (uint256, uint256) {
         uint256 pending = pool.pendingRewards(tokenId);
 
@@ -353,7 +347,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     ) external override returns (bytes4) {
         require(msg.sender == address(pool), "unexpected nft");
         require(_from == address(0), "unexpected operator");
-        // save tokenId previous owner
         tokenId = _tokenId;
         pool.approve(_from, _tokenId);
         return _ERC721_RECEIVED;
@@ -370,9 +363,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
             _operator == address(this),
             "caller is not the nft previous owner"
         );
-        // if(_to == address(this)){
-        //     return false; // user must call xGrailToken.harvestPositionTo as xGrail is not transferable
-        // }
+
         return true;
     }
 

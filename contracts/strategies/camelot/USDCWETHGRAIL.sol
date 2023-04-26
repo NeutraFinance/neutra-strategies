@@ -19,8 +19,6 @@ interface IGrailManager {
 }
 
 
-// Pool address -> 0x794a61358d6845594f94dc1db02a252b5b4814ad
-// AAVE addresses: https://docs.aave.com/developers/deployed-contracts/v3-mainnet/polygon
 contract USDCWETHGRAIL is CoreStrategyAaveGrail {
     using SafeERC20 for IERC20;
     uint256 constant farmPid = 0;

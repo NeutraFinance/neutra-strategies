@@ -88,8 +88,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     uint8 wantDecimals;
     uint8 shortDecimals;
     IUniswapV2Pair wantShortLP; // This is public because it helps with unit testing
-    IERC20 farmTokenLP;
-    IERC20 farmToken;
     // Contract Interfaces
     address grailManager; //Since it is usually custom, will leave it as an address
     ICamelotRouter router;
@@ -117,8 +115,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         // initialise token interfaces
         short = IERC20(_config.short);
         wantShortLP = IUniswapV2Pair(_config.wantShortLP);
-        //farmTokenLP = IERC20(_config.farmTokenLP);
-        //farmToken = IERC20(_config.farmToken);
         wantDecimals = IERC20Extended(_config.want).decimals();
         shortDecimals = IERC20Extended(_config.short).decimals();
 
@@ -720,10 +716,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         }
     }
 
-    function enterMarket() internal {
-        return;
-    }
-
     // calculate total value of vault assets
     function estimatedTotalAssets() public view override returns (uint256) {
         return balanceOfWant().add(balanceDeployed());
@@ -881,44 +873,8 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         }
     }
 
-    function _getHarvestInHarvestLp() internal view returns (uint256) {
-        uint256 harvest_lp = farmToken.balanceOf(address(farmTokenLP));
-        return harvest_lp;
-    }
-
-    function _getShortInHarvestLp() internal view returns (uint256) {
-        uint256 shortToken_lp = short.balanceOf(address(farmTokenLP));
-        return shortToken_lp;
-    }
-
     function _redeemWant(uint256 _redeem_amount) internal {
         pool.withdraw(address(want), _redeem_amount, address(this));
-    }
-
-    // withdraws some LP worth _amount, converts all withdrawn LP to short token to repay debt
-    function _withdrawLpRebalance(uint256 _amount)
-        internal
-        returns (uint256 swapAmountWant, uint256 slippageWant)
-    {
-        uint256 lpUnpooled = wantShortLP.balanceOf(address(this));
-        uint256 lpPooled = countLpPooled();
-        uint256 lpCount = lpUnpooled.add(lpPooled);
-        uint256 lpReq = _amount.mul(lpCount).div(balanceLp());
-        uint256 lpWithdraw;
-        if (lpReq - lpUnpooled < lpPooled) {
-            lpWithdraw = lpReq - lpUnpooled;
-        } else {
-            lpWithdraw = lpPooled;
-        }
-        _withdrawSomeLp(lpWithdraw);
-        _removeAllLp();
-        swapAmountWant = Math.min(
-            _amount.div(2),
-            want.balanceOf(address(this))
-        );
-        slippageWant = _swapExactWantShort(swapAmountWant);
-
-        _repayDebt();
     }
 
     //  withdraws some LP worth _amount, uses withdrawn LP to add to collateral & repay debt
@@ -1007,21 +963,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         }
     }
 
-    /*
-    function _sellHarvestWant() internal virtual {
-        uint256 harvestBalance = farmToken.balanceOf(address(this));
-        if (harvestBalance == 0) return;
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            harvestBalance,
-            0,
-            getTokenOutPath(address(farmToken), address(want)),
-            address(this),
-            address(0),
-            block.timestamp
-        );
-    }
-    */
-
     /**
      * @notice
      *  Swaps _amount of want for short
@@ -1100,17 +1041,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             block.timestamp
         );
         
-        // TO Do Update this calc
         _slippageWant = amountInExactWant - amountInWant;
-        // uint256[] memory amounts =
-        //     router.swapTokensForExactTokens(
-        //         _amountOut,
-        //         amountInMax,
-        //         getTokenOutPath(address(want), address(short)),
-        //         address(this),
-        //         block.timestamp
-        //     );
-        // _slippageWant = amounts[0].sub(amountInWant);   
     }
 
     function getAmountIn(uint256 amountOut) internal returns (uint256 amountIn) {
