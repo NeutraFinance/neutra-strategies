@@ -4,8 +4,6 @@ from brownie import Contract
 from brownie import interface, StrategyInsurance, GrailManager, GrailManagerProxy, USDCWETHGRAIL ,accounts
 from tests.helper import encode_function_data
 
-
- # TODO - Pull from coingecko
 DQUICK_PRICE = 159.41
 FTM_PRICE = 1.57
 WETH_PRICE = 3470

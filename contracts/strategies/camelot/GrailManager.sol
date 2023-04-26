@@ -384,6 +384,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         uint256 _tokenId,
         uint256 /*lpAmount*/
     ) external override returns (bool) {
+        require(msg.sender == address(pool), "unexpected nft");
         require(
             _operator == address(this),
             "NFTHandler: caller is not the nft previous owner"
