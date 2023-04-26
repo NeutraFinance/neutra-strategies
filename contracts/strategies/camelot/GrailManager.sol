@@ -145,6 +145,10 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
 
     uint256 public minGrailSwapAmount;
 
+    event SetStrategy(address strategy);
+    event SetManager(address manager);
+    event SetYieldBooster(address yieldBooster);
+
     modifier onlyManager() {
         _onlyManager();
         _;
@@ -320,11 +324,13 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     function setStrategyInternal(address _strategy) internal {
         strategy = CoreStrategyAPI(_strategy);
         strategist = strategy.strategist();
+        emit SetStrategy(_strategy);
     }
 
     function setManagerInternal(address _manager) internal {
         require(_manager != address(0), "invalid address");
         manager = _manager;
+        emit SetManager(_manager);
     }
 
     function approveUsage(address _usage) external onlyStrategist {
@@ -333,6 +339,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
 
     function setYieldBooster(address _yieldBooster) external onlyManager {
         yieldBooster = _yieldBooster;
+        emit SetYieldBooster(_yieldBooster);
     }
 
     function setManager(address _manager) external onlyManager {

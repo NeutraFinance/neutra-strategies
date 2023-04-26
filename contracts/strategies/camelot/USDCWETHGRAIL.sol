@@ -23,6 +23,9 @@ contract USDCWETHGRAIL is CoreStrategyAaveGrail {
     using SafeERC20 for IERC20;
     uint256 constant farmPid = 0;
 
+    event SetGrailManager(address grailManager);
+    event SetAave(address oracle, address pool);
+
     constructor(address _vault)
         CoreStrategyAaveGrail(
             _vault,
@@ -69,6 +72,7 @@ contract USDCWETHGRAIL is CoreStrategyAaveGrail {
     function setGrailManager(address _grailManager) external onlyAuthorized {
         grailManager = _grailManager;
         IERC20(address(wantShortLP)).safeApprove(_grailManager, type(uint256).max);
+        emit SetGrailManager(_grailManager);
     }
 
     function setAave(address _oracle, address _pool) external onlyAuthorized {
@@ -77,5 +81,6 @@ contract USDCWETHGRAIL is CoreStrategyAaveGrail {
         pool = IPool(_pool);
         want.safeApprove(address(pool), type(uint256).max);
         short.safeApprove(address(pool), type(uint256).max);
+        emit SetAave(_oracle, _pool);
     }
 }
