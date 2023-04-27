@@ -143,8 +143,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     uint256 public tokenId;
     IERC20 public want;
 
-    uint256 public minGrailSwapAmount;
-
     event SetStrategy(address strategy);
     event SetManager(address manager);
     event SetYieldBooster(address yieldBooster);
@@ -195,8 +193,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         pool = INFTPool(_config.pool);
         router = ICamelotRouter(_config.router);
         yieldBooster = _config.yieldBooster;
-
-        minGrailSwapAmount = 10000000000;
 
         lp.approve(address(pool), type(uint256).max);
         grail.approve(address(router), type(uint256).max);
@@ -283,7 +279,9 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         _path[0] = address(grail);
         _path[1] = address(want);
 
-        if (_amountGrail > minGrailSwapAmount){
+        uint256[] memory amounts = router.getAmountsOut(_amountGrail, _path);
+
+        if (amounts[1] > 0){
             router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                 _amountGrail,
                 0,
@@ -315,10 +313,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
 
     function balanceOfXGrail() public view returns (uint256) {
         return (xGrail.balanceOf(address(this)));
-    }
-
-    function setMinGrailSwapAmount(uint256 _amount) external onlyStrategist {
-        minGrailSwapAmount = _amount;
     }
 
     function setStrategyInternal(address _strategy) internal {
