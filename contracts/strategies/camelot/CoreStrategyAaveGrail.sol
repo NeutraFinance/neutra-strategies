@@ -412,7 +412,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     }
 
     function _rebalanceCollateralInternal() internal {
-        _lpLog();
+        _emitLpStatusLog();
         uint256 collatRatio = calcCollateral();
         uint256 shortPos = balanceDebt();
         uint256 lendPos = balanceLend();
@@ -436,7 +436,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             _depositLp();
             emit CollatRebalance(collatRatio, adjAmount);
         }
-        _lpLog();
+        _emitLpStatusLog();
     }
 
     // deploy assets according to vault strategy
@@ -449,7 +449,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         if (_amount < minDeploy || collateralCapReached(_amount)) {
             return;
         }
-        _lpLog();
+        _emitLpStatusLog();
         uint256 oPrice = getOraclePrice();
         uint256 lpPrice = getLpPrice();
         uint256 borrow =
@@ -465,7 +465,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         _borrow(borrow);
         _addToLP(borrow);
         _depositLp();
-        _lpLog();
+        _emitLpStatusLog();
     }
 
     function getLpPrice() public view returns (uint256) {
@@ -564,7 +564,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     }
 
     function _rebalanceDebtInternal() internal {
-        _lpLog();
+        _emitLpStatusLog();
         
         uint256 swapAmountWant;
         uint256 slippage;
@@ -592,7 +592,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         }
         _repayDebt();
         _deployFromLend(estimatedTotalAssets());
-        _lpLog();
+        _emitLpStatusLog();
         emit DebtRebalance(debtRatio, swapAmountWant, slippage);
     }
 
@@ -682,7 +682,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         if (_amountNeeded <= balanceWant) {
             return (_amountNeeded, 0);
         }
-        _lpLog();
+        _emitLpStatusLog();
 
         uint256 balanceDeployed = balanceDeployed();
 
@@ -729,7 +729,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
             _liquidatedAmount = balanceOfWant().sub(balanceWant);
             _loss = slippage;
         }
-        _lpLog();
+        _emitLpStatusLog();
     }
 
     // calculate total value of vault assets
@@ -1070,11 +1070,11 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         amountIn = (numerator / denominator).add(1);
     }
 
-    function lpLog() external onlyKeepers {
-        _lpLog();
+    function emitLpStatusLog() external onlyKeepers {
+        _emitLpStatusLog();
     }
 
-    function _lpLog() internal {
+    function _emitLpStatusLog() internal {
         uint256 lpBalance = wantShortLP.balanceOf(address(this));
         (uint256 wantInLp, uint256 shortInLP) = getLpReserves();
         uint256 lpTotalSupply = wantShortLP.totalSupply();
