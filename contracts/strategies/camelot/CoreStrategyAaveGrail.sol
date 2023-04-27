@@ -103,6 +103,8 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     uint256 public priceSourceDiffKeeper = 500; // 5% Default
     uint256 public priceSourceDiffUser = 200; // 2% Default
 
+    uint256 public FEE_DENOMINATOR = 100000;
+
     bool public isPaused = false;
 
     uint256 constant STD_PRECISION = 1e18;
@@ -744,13 +746,29 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         view
         returns (uint256 _wantInLp, uint256 _shortInLp)
     {
-        (uint112 reserves0, uint112 reserves1, ) = wantShortLP.getReserves();
+        (uint112 reserves0, uint112 reserves1,,) = wantShortLP.getReserves();
         if (wantShortLP.token0() == address(want)) {
             _wantInLp = uint256(reserves0);
             _shortInLp = uint256(reserves1);
         } else {
             _wantInLp = uint256(reserves1);
             _shortInLp = uint256(reserves0);
+        }
+    }
+
+    function getLpReservesAndFee() public view returns (uint256 _wantInLp, uint256 _shortInLp, uint256 _wantFeePercent, uint256 _shortFeePercent) {
+        (uint112 reserves0, uint112 reserves1, uint16 fee0, uint16 fee1) = wantShortLP.getReserves();
+        
+        if (wantShortLP.token0() == address(want)){
+            _wantInLp = uint256(reserves0);
+            _shortInLp = uint256(reserves1);
+            _wantFeePercent = uint256(fee0);
+            _shortFeePercent = uint256(fee1);
+        } else {
+            _wantInLp = uint256(reserves1);
+            _shortInLp = uint256(reserves0);
+            _wantFeePercent = uint256(fee1);
+            _shortFeePercent = uint256(fee0);
         }
     }
 
@@ -1046,11 +1064,11 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
 
     function getAmountIn(uint256 amountOut) internal returns (uint256 amountIn) {
         require(amountOut > 0, "insufficient output amount");
-        (uint256 reserveIn, uint256 reserveOut) = getLpReserves();
+        (uint256 reserveIn, uint256 reserveOut, uint256 reserveInFee,) = getLpReservesAndFee();
         require(reserveIn > 0 && reserveOut > 0, "insufficient liquidity");
 
-        uint256 numerator = reserveIn.mul(amountOut).mul(1000);
-        uint256 denominator = reserveOut.sub(amountOut).mul(997);
+        uint256 numerator = reserveIn.mul(amountOut).mul(FEE_DENOMINATOR);
+        uint256 denominator = reserveOut.sub(amountOut).mul(FEE_DENOMINATOR - reserveInFee);
         amountIn = (numerator / denominator).add(1);
     }
 
