@@ -87,7 +87,7 @@ def test_operation(
     print('debtRatio:   {0}'.format(debtRatio))
     print('collatRatio: {0}'.format(collatRatio))
     assert pytest.approx(10000, rel=1e-3) == debtRatio
-    assert pytest.approx(6000, rel=1e-2) == collatRatio
+    assert pytest.approx(7000, rel=1e-2) == collatRatio
     chain.sleep(1)
     chain.mine(1)
 
@@ -449,7 +449,7 @@ def test_reduce_debt_with_low_calcdebtratio(
     print('debtRatio:   {0}'.format(debtRatio))
     print('collatRatio: {0}'.format(collatRatioBefore))
     #assert pytest.approx(9500, rel=1e-3) == debtRatio
-    assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
+    assert pytest.approx(7000, rel=2e-2) == collatRatioBefore
 
     vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 50_00, {"from": gov})
     chain.sleep(1)
@@ -478,7 +478,7 @@ def test_reduce_debt_with_high_calcdebtratio(
     print('debtRatio:   {0}'.format(debtRatio))
     print('collatRatio: {0}'.format(collatRatioBefore))
     #assert pytest.approx(10500, rel=2e-3) == debtRatio
-    assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
+    assert pytest.approx(7000, rel=2e-2) == collatRatioBefore
 
     chain.sleep(1)
     chain.mine(1)
@@ -526,7 +526,7 @@ def test_increase_debt_with_low_calcdebtratio(
     print('debtRatio:   {0}'.format(debtRatio))
     print('collatRatio: {0}'.format(collatRatioBefore))
     #assert pytest.approx(9500, rel=1e-3) == debtRatio
-    assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
+    assert pytest.approx(7000, rel=2e-2) == collatRatioBefore
 
     vault_mock_oracle.updateStrategyDebtRatio(strategy_mock_oracle.address, 100_00, {"from": gov})
     chain.sleep(1)
@@ -564,7 +564,7 @@ def test_increase_debt_with_high_calcdebtratio(
     print('debtRatio:   {0}'.format(debtRatio))
     print('collatRatio: {0}'.format(collatRatioBefore))
     #assert pytest.approx(10500, rel=2e-3) == debtRatio
-    assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
+    assert pytest.approx(7000, rel=2e-2) == collatRatioBefore
 
     chain.sleep(1)
     chain.mine(1)

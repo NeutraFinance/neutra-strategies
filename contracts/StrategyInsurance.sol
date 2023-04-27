@@ -53,7 +53,7 @@ contract StrategyInsurance {
 
     // The maximum compensation rate the insurrance fund will return funds to the strategy
     // proportional to the TotalDebt of the strategy
-    uint256 public maximumCompenstionRate = 5; // 5 bips per harvest default
+    uint256 public maximumCompenstionRate = 5; // 5 bps per harvest default
 
     function _onlyAuthorized() internal {
         require(

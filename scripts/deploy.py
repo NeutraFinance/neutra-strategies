@@ -2,6 +2,7 @@ from pathlib import Path
 
 from brownie import accounts, config, network, project, web3, StrategyInsurance
 from eth_utils import is_checksum_address
+from tests.helper import encode_function_data
 import click
 
 API_VERSION = config["dependencies"][0].split("@")[-1]
@@ -10,7 +11,7 @@ Vault = project.load(
 ).Vault
 
 # edit this to deploy
-from brownie import USDCWETHGRAIL, GrailManager 
+from brownie import USDCWETHGRAIL, GrailManager, GrailManagerProxy, CommonHealthCheck
 
 Strategy = USDCWETHGRAIL
 
@@ -43,7 +44,7 @@ def main():
     token = '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'
     
 
-    vault.initialize(token, dev, dev, "testNeuUSDC", "tnUSDC", dev, dev)
+    vault.initialize(token, dev, dev, "Test Neutra USDC", "tnUSDC", dev, dev)
 
     print(
         f"""
@@ -75,26 +76,35 @@ def main():
         'router' : '0xc873fEcbd354f5A56E00E710B90EF4201db2448d'
     }
 
-    grailManager = GrailManager.deploy(dev, {'from': dev})
-    strat = Strategy.deploy(vault, grailManager,{"from": dev})
+    strat = Strategy.deploy(vault,{"from": dev})
     yieldBooster = '0xD27c373950E7466C53e5Cd6eE3F70b240dC0B1B1'
     xGrail = '0x3CAaE25Ee616f2C8E13C74dA0813402eae3F496b'
+    grailManager = GrailManager.deploy({'from': dev})
+
     grailConfig = [strat.want(), conf['lp_token'], conf['harvest_token'], xGrail, conf['lp_farm'], conf['router'], yieldBooster]
     grailManager.initialize(dev, strat, grailConfig, {'from': dev})
 
+    encoded_initializer_function = encode_function_data(grailManager.initialize, dev, strat, grailConfig)
+
+    grailManagerProxy = GrailManagerProxy.deploy(grailManager.address, encoded_initializer_function, {'from':dev})
+    strat.setGrailManager(grailManagerProxy, {'from':dev})
 
     insurance = StrategyInsurance.deploy(strat, {'from':dev})
-    strat.setInsurance(insurance, {'from': dev})    
-    strat.setMinReportDelay(28800, {'from':dev})
-    strat.setMaxReportDelay(43200, {'from':dev})
-    offset = 10
-    strat.setDebtThresholds(9800 + offset, 10200 - offset, 5000, {'from':dev})
-    strat.setCollateralThresholds(4500, 5000, 5500, 8500, {'from':dev})
+    strat.setInsurance(insurance, {'from': dev})  
+    
+    healthCare = CommonHealthCheck.deploy({'from':dev})
+    strat.setHealthCheck(healthCare, {'from': dev})
+
+    strat.setMinReportDelay(28740, {'from':dev})
+    # strat.setMaxReportDelay(43200, {'from':dev})
+    # offset = 10
+    # strat.setDebtThresholds(9800 + offset, 10200 - offset, 5000, {'from':dev})
+    # strat.setCollateralThresholds(4500, 5000, 5500, 8500, {'from':dev})
     
     # flatten code
-    f = open("flat.sol", "w")
-    Strategy.get_verification_info()
-    f.write(Strategy._flattener.flattened_source)
-    f.close()
+    # f = open("flat.sol", "w")
+    # Strategy.get_verification_info()
+    # f.write(Strategy._flattener.flattened_source)
+    # f.close()
     print('Successfully Deploy. See flat.sol for verification and don\'t forget to set the HEALTH CHECK!!')
     

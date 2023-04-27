@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0
-
-// Feel free to change this version of Solidity. We support >=0.6.0 <0.7.0;
 pragma solidity 0.8.15;
 
 import {
@@ -80,15 +78,15 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         uint256 reserveShort
     );
 
-    uint256 public collatUpper = 6700;
-    uint256 public collatTarget = 6000;
-    uint256 public collatLower = 5300;
-    uint256 public debtUpper = 10190;
-    uint256 public debtLower = 9810;
+    uint256 public collatUpper = 7500;
+    uint256 public collatTarget = 7000;
+    uint256 public collatLower = 6500;
+    uint256 public debtUpper = 10390;
+    uint256 public debtLower = 9610;
     uint256 public rebalancePercent = 10000; // 100% (how far does rebalance of debt move towards 100% from threshold)
 
     // protocal limits & upper, target and lower thresholds for ratio of debt to collateral
-    uint256 public collatLimit = 7500;
+    uint256 public collatLimit = 8100;
 
     bool public doPriceCheck = true;
 
@@ -97,8 +95,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     uint8 wantDecimals;
     uint8 shortDecimals;
     IUniswapV2Pair wantShortLP; // This is public because it helps with unit testing
-    IERC20 farmTokenLP;
-    IERC20 farmToken;
     // Contract Interfaces
     address grailManager; //Since it is usually custom, will leave it as an address
     ICamelotRouter router;
@@ -126,8 +122,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         // initialise token interfaces
         short = IERC20(_config.short);
         wantShortLP = IUniswapV2Pair(_config.wantShortLP);
-        //farmTokenLP = IERC20(_config.farmTokenLP);
-        //farmToken = IERC20(_config.farmToken);
         wantDecimals = IERC20Extended(_config.want).decimals();
         shortDecimals = IERC20Extended(_config.short).decimals();
 
@@ -738,10 +732,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         _lpLog();
     }
 
-    function enterMarket() internal {
-        return;
-    }
-
     // calculate total value of vault assets
     function estimatedTotalAssets() public view override returns (uint256) {
         return balanceOfWant().add(balanceDeployed());
@@ -899,44 +889,8 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         }
     }
 
-    function _getHarvestInHarvestLp() internal view returns (uint256) {
-        uint256 harvest_lp = farmToken.balanceOf(address(farmTokenLP));
-        return harvest_lp;
-    }
-
-    function _getShortInHarvestLp() internal view returns (uint256) {
-        uint256 shortToken_lp = short.balanceOf(address(farmTokenLP));
-        return shortToken_lp;
-    }
-
     function _redeemWant(uint256 _redeem_amount) internal {
         pool.withdraw(address(want), _redeem_amount, address(this));
-    }
-
-    // withdraws some LP worth _amount, converts all withdrawn LP to short token to repay debt
-    function _withdrawLpRebalance(uint256 _amount)
-        internal
-        returns (uint256 swapAmountWant, uint256 slippageWant)
-    {
-        uint256 lpUnpooled = wantShortLP.balanceOf(address(this));
-        uint256 lpPooled = countLpPooled();
-        uint256 lpCount = lpUnpooled.add(lpPooled);
-        uint256 lpReq = _amount.mul(lpCount).div(balanceLp());
-        uint256 lpWithdraw;
-        if (lpReq - lpUnpooled < lpPooled) {
-            lpWithdraw = lpReq - lpUnpooled;
-        } else {
-            lpWithdraw = lpPooled;
-        }
-        _withdrawSomeLp(lpWithdraw);
-        _removeAllLp();
-        swapAmountWant = Math.min(
-            _amount.div(2),
-            want.balanceOf(address(this))
-        );
-        slippageWant = _swapExactWantShort(swapAmountWant);
-
-        _repayDebt();
     }
 
     //  withdraws some LP worth _amount, uses withdrawn LP to add to collateral & repay debt
@@ -1025,21 +979,6 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         }
     }
 
-    /*
-    function _sellHarvestWant() internal virtual {
-        uint256 harvestBalance = farmToken.balanceOf(address(this));
-        if (harvestBalance == 0) return;
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            harvestBalance,
-            0,
-            getTokenOutPath(address(farmToken), address(want)),
-            address(this),
-            address(0),
-            block.timestamp
-        );
-    }
-    */
-
     /**
      * @notice
      *  Swaps _amount of want for short
@@ -1054,15 +993,20 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     {
         uint256 amountOutMin = convertWantToShortLP(_amount);
         
+        uint256 shortBalanceBefore = short.balanceOf(address(this));
+
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             _amount,
             amountOutMin.mul(slippageAdj).div(BASIS_PRECISION),
             getTokenOutPath(address(want), address(short)), // _pathWantToShort(),
             address(this),
-            address(0),
+            address(this),
             block.timestamp
         );
-        slippageWant = 0;
+
+        uint256 amountOut = short.balanceOf(address(this)) - shortBalanceBefore;
+
+        slippageWant = convertShortToWantLP(amountOutMin - amountOut);
     }
 
     /**
@@ -1079,15 +1023,21 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         returns (uint256 _amountWant, uint256 _slippageWant)
     {
         _amountWant = convertShortToWantLP(_amountShort);
+
+        uint256 wantBalanceBefore = want.balanceOf(address(this));
+
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             _amountShort,
             _amountWant.mul(slippageAdj).div(BASIS_PRECISION),
             getTokenOutPath(address(short), address(want)),
             address(this),
-            address(0),
+            address(this),
             block.timestamp
         );
-        _slippageWant = 0;
+
+        uint256 _amountWantOut = want.balanceOf(address(this)) - wantBalanceBefore;
+
+        _slippageWant = _amountWant - _amountWantOut;
     }
 
     function _swapWantShortExact(uint256 _amountOut)
@@ -1095,32 +1045,29 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
         returns (uint256 _slippageWant)
     {
         uint256 amountInWant = convertShortToWantLP(_amountOut);
-        uint256 amountInMax =
-            (amountInWant.mul(BASIS_PRECISION).div(slippageAdj)).add(10); // add 1 to make up for rounding down
+        uint256 amountInExactWant = getAmountIn(_amountOut);
 
         // Sub Optimal implementation given camelot does not have SwapTokensForExactTokens
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            amountInMax,
+            amountInExactWant,
             _amountOut,
             getTokenOutPath(address(want), address(short)), // _pathWantToShort(),
             address(this),
-            address(0),
+            address(this),
             block.timestamp
         );
         
-        // TO Do Update this calc
-        _slippageWant = 0;
-        // uint256[] memory amounts =
-        //     router.swapTokensForExactTokens(
-        //         _amountOut,
-        //         amountInMax,
-        //         getTokenOutPath(address(want), address(short)),
-        //         address(this),
-        //         block.timestamp
-        //     );
-        // _slippageWant = amounts[0].sub(amountInWant);
+        _slippageWant = amountInExactWant - amountInWant;
+    }
 
-        
+    function getAmountIn(uint256 amountOut) internal returns (uint256 amountIn) {
+        require(amountOut > 0, "insufficient output amount");
+        (uint256 reserveIn, uint256 reserveOut) = getLpReserves();
+        require(reserveIn > 0 && reserveOut > 0, "insufficient liquidity");
+
+        uint256 numerator = reserveIn.mul(amountOut).mul(1000);
+        uint256 denominator = reserveOut.sub(amountOut).mul(997);
+        amountIn = (numerator / denominator).add(1);
     }
 
     function lpLog() external onlyKeepers {

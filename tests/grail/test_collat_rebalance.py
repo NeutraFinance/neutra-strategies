@@ -69,7 +69,7 @@ def test_large_collat_rebalance_with_low_debt(chain, accounts, token, deployed_v
     print('debtRatio:   {0}'.format(debtRatioBefore))
     print('collatRatio: {0}'.format(collatRatioBefore))
     assert pytest.approx(9800, rel=1e-3) == debtRatioBefore
-    assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
+    assert pytest.approx(7000, rel=2e-2) == collatRatioBefore
 
     # now rebalance collat
     # We expect this to drag the debt ratio down, but only ~3%, this will differ
@@ -119,22 +119,22 @@ def test_large_collat_rebalance_with_low_debt(chain, accounts, token, deployed_v
     print('debtRatio:   {0}'.format(debtRatioBefore))
     print('CollatRatio: {0}'.format(collatRatioBefore))
     assert pytest.approx(10200, rel=1e-3) == debtRatioBefore
-    assert pytest.approx(6000, rel=2e-2) == collatRatioBefore
+    assert pytest.approx(7000, rel=2e-2) == collatRatioBefore
 
     # now rebalance collat
-    # We expect this to drag the debt ratio down, but only ~3%, this will differ
+    # We expect this to drag the debt ratio down, but only ~3.16%, this will differ
     strategy.rebalanceCollateral()
     debtAfter = strategy.calcDebtRatio()
     debtCollat = strategy.calcCollateral()
     print('debtRatio:   {0}'.format(debtAfter))
     print('CollatRatio: {0}'.format(debtCollat))
-    assert debtAfter < debtRatioBefore + 300 
+    assert debtAfter < debtRatioBefore + 316 
     assert pytest.approx(target, rel=1e-2) == debtCollat
 
     # now rebalance debt for good measure
     # assert False
-    target = 6000
-    strategy.setCollateralThresholds(target-500, target, target+500, 7500)
+    target = 7000
+    strategy.setCollateralThresholds(target-500, target, target+500, 8000)
     debtRatioBefore = strategy.calcDebtRatio()
     collatRatioBefore = strategy.calcCollateral()
     print('debtRatio:   {0}'.format(debtRatioBefore))
@@ -156,7 +156,7 @@ def test_typical_rebalance_with_low_debt(chain, accounts, token, deployed_vault,
     # set low collateral to 52%
     target = 5200
     
-    strategy.setCollateralThresholds(target-500, target, target+500, 7500)
+    strategy.setCollateralThresholds(target-500, target, target+500, 8000)
     chain.sleep(1)
     chain.mine(1)
     strategy.rebalanceCollateral()
@@ -174,9 +174,9 @@ def test_typical_rebalance_with_low_debt(chain, accounts, token, deployed_vault,
     assert pytest.approx(9800, rel=1e-3) == debtRatioBefore
     assert pytest.approx(target, rel=2e-2) == collatRatioBefore
 
-    # now set collat back to 60%
-    target = 6000
-    strategy.setCollateralThresholds(target-500, target, target+500, 7500)
+    # now set collat back to 70%
+    target = 7000
+    strategy.setCollateralThresholds(target-500, target, target+500, 8000)
     strategy.rebalanceCollateral()
     debtAfter = strategy.calcDebtRatio()
     debtCollat = strategy.calcCollateral()
@@ -189,8 +189,7 @@ def test_typical_rebalance_with_low_debt(chain, accounts, token, deployed_vault,
 # this is a typical collat rebalance ~10% rebalance
 def test_typical_collat_rebalance_with_high_debt(chain, accounts, token, deployed_vault, strategy, user, conf, gov, lp_token, lp_whale, grailManager, lp_price, pid, grail_manager_contract):
     # set low collateral and rebalance
-    target = 6800
-    strategy.setCollateralThresholds(target-500, target, target+500, 7500)
+    strategy.setCollateralThresholds(7600-500, 7600, 7600+500, 8200)
     strategy.rebalanceCollateral()
     
     # Change the debt ratio to ~102%
@@ -205,11 +204,11 @@ def test_typical_collat_rebalance_with_high_debt(chain, accounts, token, deploye
     print('debtRatio:   {0}'.format(debtRatioBefore))
     print('CollatRatio: {0}'.format(collatRatioBefore))
     assert pytest.approx(10200, rel=1e-3) == debtRatioBefore
-    assert pytest.approx(target, rel=2e-2) == collatRatioBefore
+    assert pytest.approx(7600, rel=2e-2) == collatRatioBefore
 
-    # now set collat back to 60%
-    target = 6000
-    strategy.setCollateralThresholds(target-500, target, target+500, 7500)
+    # now set collat back to 70%
+    target = 7000
+    strategy.setCollateralThresholds(target-500, target, target+500, 8000)
 
     chain.sleep(1)
     chain.mine(1)

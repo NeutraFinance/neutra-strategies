@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
-
 pragma solidity 0.8.15;
 
-// Grail Router
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
@@ -129,6 +127,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     using SafeMath for uint256;
 
     uint256 private constant _TOTAL_REWARDS_SHARES = 10000;
+    bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
 
     // camelot contracts
     INFTPool public pool;
@@ -144,9 +143,11 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     uint256 public tokenId;
     IERC20 public want;
 
-    mapping(uint256 => address) tokenIdOwner; // save tokenId previous owner
+    uint256 public minGrailSwapAmount;
 
-    bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
+    event SetStrategy(address strategy);
+    event SetManager(address manager);
+    event SetYieldBooster(address yieldBooster);
 
     modifier onlyManager() {
         _onlyManager();
@@ -194,6 +195,8 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         pool = INFTPool(_config.pool);
         router = ICamelotRouter(_config.router);
         yieldBooster = _config.yieldBooster;
+
+        minGrailSwapAmount = 10000000000;
 
         lp.approve(address(pool), type(uint256).max);
         grail.approve(address(router), type(uint256).max);
@@ -247,7 +250,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     }
 
     function harvest() external onlyStrategyAndAbove {
-        // harvest grail rewards
         if (tokenId != uint256(0)) {
             pool.harvestPosition(tokenId);
             _swapGrailToWant(balanceOfGrail());
@@ -281,8 +283,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         _path[0] = address(grail);
         _path[1] = address(want);
 
-        uint256 minGrailSwapAmount = 10000000000;
-
         if (_amountGrail > minGrailSwapAmount){
             router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                 _amountGrail,
@@ -295,8 +295,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         }
     }
 
-    // need to get the pending Grail rewards
-    // xGrail cannot be liquidated
     function getPendingRewards() public view returns (uint256, uint256) {
         uint256 pending = pool.pendingRewards(tokenId);
 
@@ -319,22 +317,29 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         return (xGrail.balanceOf(address(this)));
     }
 
+    function setMinGrailSwapAmount(uint256 _amount) external onlyStrategist {
+        minGrailSwapAmount = _amount;
+    }
+
     function setStrategyInternal(address _strategy) internal {
         strategy = CoreStrategyAPI(_strategy);
         strategist = strategy.strategist();
+        emit SetStrategy(_strategy);
     }
 
     function setManagerInternal(address _manager) internal {
         require(_manager != address(0), "invalid address");
         manager = _manager;
+        emit SetManager(_manager);
     }
 
-    function approveUsage(address _usage) external onlyManager {
+    function approveUsage(address _usage) external onlyStrategist {
         xGrail.approveUsage(_usage, type(uint256).max);
     }
 
     function setYieldBooster(address _yieldBooster) external onlyManager {
         yieldBooster = _yieldBooster;
+        emit SetYieldBooster(_yieldBooster);
     }
 
     function setManager(address _manager) external onlyManager {
@@ -349,7 +354,6 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
     ) external override returns (bytes4) {
         require(msg.sender == address(pool), "unexpected nft");
         require(_from == address(0), "unexpected operator");
-        // save tokenId previous owner
         tokenId = _tokenId;
         pool.approve(_from, _tokenId);
         return _ERC721_RECEIVED;
@@ -366,9 +370,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
             _operator == address(this),
             "caller is not the nft previous owner"
         );
-        // if(_to == address(this)){
-        //     return false; // user must call xGrailToken.harvestPositionTo as xGrail is not transferable
-        // }
+
         return true;
     }
 
@@ -389,6 +391,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         uint256 _tokenId,
         uint256 /*lpAmount*/
     ) external override returns (bool) {
+        require(msg.sender == address(pool), "unexpected nft");
         require(
             _operator == address(this),
             "NFTHandler: caller is not the nft previous owner"

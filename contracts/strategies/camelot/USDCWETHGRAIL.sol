@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.15;
 
 import {
@@ -19,11 +19,12 @@ interface IGrailManager {
 }
 
 
-// Pool address -> 0x794a61358d6845594f94dc1db02a252b5b4814ad
-// AAVE addresses: https://docs.aave.com/developers/deployed-contracts/v3-mainnet/polygon
 contract USDCWETHGRAIL is CoreStrategyAaveGrail {
     using SafeERC20 for IERC20;
     uint256 constant farmPid = 0;
+
+    event SetGrailManager(address grailManager);
+    event SetAave(address oracle, address pool);
 
     constructor(address _vault)
         CoreStrategyAaveGrail(
@@ -71,5 +72,15 @@ contract USDCWETHGRAIL is CoreStrategyAaveGrail {
     function setGrailManager(address _grailManager) external onlyAuthorized {
         grailManager = _grailManager;
         IERC20(address(wantShortLP)).safeApprove(_grailManager, type(uint256).max);
+        emit SetGrailManager(_grailManager);
+    }
+
+    function setAave(address _oracle, address _pool) external onlyAuthorized {
+        require(_oracle != address(0) && _pool != address(0), "invalid address");
+        oracle = IAaveOracle(_oracle);
+        pool = IPool(_pool);
+        want.safeApprove(address(pool), type(uint256).max);
+        short.safeApprove(address(pool), type(uint256).max);
+        emit SetAave(_oracle, _pool);
     }
 }
