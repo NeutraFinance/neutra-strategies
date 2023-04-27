@@ -82,7 +82,8 @@ interface IUniswapV2Pair {
         returns (
             uint112 reserve0,
             uint112 reserve1,
-            uint32 blockTimestampLast
+            uint16 fee0,
+            uint16 fee1
         );
 
     function price0CumulativeLast() external view returns (uint256);
