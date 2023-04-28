@@ -103,7 +103,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     uint256 public priceSourceDiffKeeper = 500; // 5% Default
     uint256 public priceSourceDiffUser = 200; // 2% Default
 
-    uint256 public FEE_DENOMINATOR = 100000;
+    uint256 constant FEE_DENOMINATOR = 100000;
 
     bool public isPaused = false;
 
@@ -142,7 +142,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     function _setup() internal virtual {}
 
     function name() external view override returns (string memory) {
-        return "StrategyHedgedFarmingAaveV2.4";
+        return "StrategyHedgedFarmingAaveCamelotV1.0";
     }
 
     function prepareReturn(uint256 _debtOutstanding)
@@ -268,7 +268,7 @@ abstract contract CoreStrategyAaveGrail is BaseStrategy {
     }
 
     function migrateInsurance(address _newInsurance) external onlyGovernance {
-        require(address(_newInsurance) == address(0));
+        require(address(_newInsurance) != address(0));
         insurance.migrateInsurance(_newInsurance);
         insurance = IStrategyInsurance(_newInsurance);
     }

@@ -201,8 +201,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
 
     function _authorizeUpgrade(address newImplementation) internal override onlyManager {}
 
-    function setStrategy(address _strategy) external {
-        _onlyStrategist();
+    function setStrategy(address _strategy) external onlyStrategist {
         setStrategyInternal(_strategy);
     }
 
@@ -257,11 +256,11 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         _stakeXGrail(_amount);
     }
 
-    function redeemXGrail(uint256 _amount, uint256 _duration) external onlyManager {
+    function redeemXGrail(uint256 _amount, uint256 _duration) external onlyStrategist {
         xGrail.redeem(_amount, _duration);
     }
 
-    function cancelRedeem(uint256 _redeemIndex) external onlyManager {
+    function cancelRedeem(uint256 _redeemIndex) external onlyStrategist {
         xGrail.cancelRedeem(_redeemIndex);
     }
 
@@ -331,7 +330,7 @@ contract GrailManager is INFTHandler, Initializable, UUPSUpgradeable {
         xGrail.approveUsage(_usage, type(uint256).max);
     }
 
-    function setYieldBooster(address _yieldBooster) external onlyManager {
+    function setYieldBooster(address _yieldBooster) external onlyStrategist {
         yieldBooster = _yieldBooster;
         emit SetYieldBooster(_yieldBooster);
     }
