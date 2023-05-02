@@ -374,33 +374,3 @@ def test_Sandwhich_Low(
 
     with brownie.reverts():     
         vault_mock_oracle.withdraw({'from' : user}) 
-
-"""
-def test_collat_rebalance_PriceOffset(chain, accounts, token, strategist, strategy_mock_initialized_vault, strategy_mock_oracle, user, conf, gov, lp_token, lp_whale, lp_farm, lp_price, pid, router, whale, shortWhale):
-    # set low collateral and rebalance
-    target = 4500
-    strategy_mock_oracle.setCollateralThresholds(target-200, target, target+200, 7500)
-    collatBefore = strategy_mock_oracle.calcCollateral()
-
-    swapPct = 0.3
-    offSetDebtRatioHigh(strategy_mock_oracle, lp_token, token, Contract, swapPct, router, whale)
-    
-    # rebalance
-    chain.sleep(1)
-    chain.mine(1)
-    
-    strategy_mock_oracle.rebalanceCollateral()
-    debtCollat = strategy_mock_oracle.calcCollateral()
-    print('CollatRatio: {0}'.format(debtCollat))
-    #assert pytest.approx(10000, rel=1e-3) == debtAfter
-
-    #steal some LP 
-
-    #lp_token.transfer(strategy, 1000000, {'from' : lp_whale})
-
-    offSetDebtRatioLow(strategy_mock_oracle, lp_token, token, Contract, swapPct, router, shortWhale)
-    # bring price back 
-    # tx = strategy.liquidatePositionAuth(strategy.estimatedTotalAssets())
-    
-    # set collat ratio above current 
-"""    
